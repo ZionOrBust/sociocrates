@@ -14,7 +14,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "deploy": "npm run build && npm run db:push",
-    "vercel-build": "npm run build"
+    "vercel-build": "npm run build --noEmit false"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
