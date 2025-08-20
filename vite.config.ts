@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   root: "client",
-  base: "/app/", // Configure for subdirectory deployment
+  base: "/", // Serve from root path in development
   build: {
     outDir: "../dist",
     emptyOutDir: true,
