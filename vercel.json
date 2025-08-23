@@ -1,33 +1,10 @@
 {
   "version": 2,
-  "name": "sociocrates-decision-app",
-  "builds": [
-    {
-      "src": "client/**",
-      "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "npm run build",
-        "outputDirectory": "dist"
-      }
-    }
-  ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
-    }
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
-  "outputDirectory": "dist"
+    "api/**/*.ts": { "maxDuration": 30 }
+  }
 }
