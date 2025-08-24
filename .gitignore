@@ -1,0 +1,7 @@
+
+# keys
+*.pem
+*.key
+*.pub
+sociocates-key
+sociocates-key.pub

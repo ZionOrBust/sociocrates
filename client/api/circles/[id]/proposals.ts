@@ -6,15 +6,15 @@ import { storage } from "../../_lib/storage";
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== "GET") {
+    return res.status(405).json({ message: "Method not allowed" });
   }
 
   const authenticatedReq = req as AuthenticatedRequest;
-  
+
   const isAuthenticated = await authenticateToken(authenticatedReq);
   if (!isAuthenticated) {
-    return res.status(401).json({ message: 'Access token required' });
+    return res.status(401).json({ message: "Access token required" });
   }
 
   const authCheck = requireAuth(authenticatedReq);
@@ -23,11 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { circleId } = req.query;
+    // folder is [id], so the dynamic param is "id"
+    const raw = (req.query as Record<string, string | string[]>)["id"];
+    const circleId = Array.isArray(raw) ? raw[0] : raw;
+
     const proposals = await storage.getProposalsByCircle(circleId as string);
-    res.json(proposals);
+    return res.json(proposals);
   } catch (error) {
-    console.error('Error fetching proposals:', error);
-    res.status(500).json({ message: 'Failed to fetch proposals' });
+    console.error("Error fetching proposals:", error);
+    return res.status(500).json({ message: "Failed to fetch proposals" });
   }
 }
