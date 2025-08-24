@@ -4,15 +4,14 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: "client",
-  base: "/", // Serve from root path in development
+  // Root is implicitly the folder containing this file: client/
   build: {
-    outDir: "../dist",
+    outDir: "dist",       // stays inside client/
     emptyOutDir: true,
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./client/src"),
+      "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "./shared"),
     },
   },
