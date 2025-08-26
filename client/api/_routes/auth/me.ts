@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "../_lib/cors";
-import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../_lib/auth";
+import { handleCors } from "../../_lib/cors";
+import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../_lib/auth";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
