@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "../../../_lib/cors";
-import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../_lib/auth";
-import { storage } from "../../../_lib/storage";
+import { handleCors } from "../../../lib/cors";
+import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../lib/auth";
+import { storage } from "../../../lib/storage";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -22,24 +22,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     try {
-      const reactions = await storage.getQuickReactions(proposalId as string);
-      res.json(reactions);
+      const questions = await storage.getClarifyingQuestions(proposalId as string);
+      res.json(questions);
     } catch (error) {
-      console.error('Error fetching reactions:', error);
-      res.status(500).json({ message: 'Failed to fetch reactions' });
+      console.error('Error fetching questions:', error);
+      res.status(500).json({ message: 'Failed to fetch questions' });
     }
   } else if (req.method === 'POST') {
     try {
-      const { reaction } = req.body;
-      const reactionData = await storage.addQuickReaction({
+      const { question } = req.body;
+      const questionData = await storage.addClarifyingQuestion({
         proposalId: proposalId as string,
         userId: authenticatedReq.user!.id,
-        reaction
+        question
       });
-      res.json(reactionData);
+      res.json(questionData);
     } catch (error) {
-      console.error('Error adding reaction:', error);
-      res.status(500).json({ message: 'Failed to add reaction' });
+      console.error('Error adding question:', error);
+      res.status(500).json({ message: 'Failed to add question' });
     }
   } else {
     res.status(405).json({ message: 'Method not allowed' });

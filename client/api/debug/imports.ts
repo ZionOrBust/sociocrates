@@ -3,20 +3,20 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 // Point directly at your route modules under _routes:
 const registry = {
-  circles_index: () => import("../_routes/circles/index"),
-  circles_id_index: () => import("../_routes/circles/_id/index"),
-  circles_id_proposals: () => import("../_routes/circles/_id/proposals"),
+  circles_index: () => import("../routes/circles/index"),
+  circles_id_index: () => import("../routes/circles/_id/index"),
+  circles_id_proposals: () => import("../routes/circles/_id/proposals"),
 
   // Remove this line if you don't have proposals/index.ts
-  proposals_index: () => import("../_routes/proposals/index"),
-  proposals_id_index: () => import("../_routes/proposals/_id/index"),
-  proposals_id_consent: () => import("../_routes/proposals/_id/consent"),
-  proposals_id_objections: () => import("../_routes/proposals/_id/objections"),
-  proposals_id_questions: () => import("../_routes/proposals/_id/questions"),
-  proposals_id_reactions: () => import("../_routes/proposals/_id/reactions"),
+  proposals_index: () => import("../routes/proposals/index"),
+  proposals_id_index: () => import("../routes/proposals/_id/index"),
+  proposals_id_consent: () => import("../routes/proposals/_id/consent"),
+  proposals_id_objections: () => import("../routes/proposals/_id/objections"),
+  proposals_id_questions: () => import("../routes/proposals/_id/questions"),
+  proposals_id_reactions: () => import("../routes/proposals/_id/reactions"),
 
-  auth_login: () => import("../_routes/auth/login"),
-  auth_me: () => import("../_routes/auth/me"),
+  auth_login: () => import("../routes/auth/login"),
+  auth_me: () => import("../routes/auth/me"),
 };
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
