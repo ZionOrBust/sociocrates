@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "../../../_lib/cors";
-import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../_lib/auth";
-import { storage } from "../../../_lib/storage";
+import { handleCors } from "../../../lib/cors";
+import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../lib/auth";
+import { storage } from "../../../lib/storage";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -22,24 +22,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     try {
-      const questions = await storage.getClarifyingQuestions(proposalId as string);
-      res.json(questions);
+      const objections = await storage.getObjections(proposalId as string);
+      res.json(objections);
     } catch (error) {
-      console.error('Error fetching questions:', error);
-      res.status(500).json({ message: 'Failed to fetch questions' });
+      console.error('Error fetching objections:', error);
+      res.status(500).json({ message: 'Failed to fetch objections' });
     }
   } else if (req.method === 'POST') {
     try {
-      const { question } = req.body;
-      const questionData = await storage.addClarifyingQuestion({
+      const { objection, severity } = req.body;
+      const objectionData = await storage.addObjection({
         proposalId: proposalId as string,
         userId: authenticatedReq.user!.id,
-        question
+        objection,
+        severity,
+        isResolved: false
       });
-      res.json(questionData);
+      res.json(objectionData);
     } catch (error) {
-      console.error('Error adding question:', error);
-      res.status(500).json({ message: 'Failed to add question' });
+      console.error('Error adding objection:', error);
+      res.status(500).json({ message: 'Failed to add objection' });
     }
   } else {
     res.status(405).json({ message: 'Method not allowed' });
