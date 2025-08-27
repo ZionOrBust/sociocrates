@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "../../../lib/cors";
-import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../lib/auth";
-import { storage } from "../../../lib/storage";
+import { handleCors } from "../../../../api/lib/cors";
+import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../../api/lib/auth";
+import { storage } from "../../../../api/lib/storage";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -22,26 +22,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     try {
-      const objections = await storage.getObjections(proposalId as string);
-      res.json(objections);
+      const reactions = await storage.getQuickReactions(proposalId as string);
+      res.json(reactions);
     } catch (error) {
-      console.error('Error fetching objections:', error);
-      res.status(500).json({ message: 'Failed to fetch objections' });
+      console.error('Error fetching reactions:', error);
+      res.status(500).json({ message: 'Failed to fetch reactions' });
     }
   } else if (req.method === 'POST') {
     try {
-      const { objection, severity } = req.body;
-      const objectionData = await storage.addObjection({
+      const { reaction } = req.body;
+      const reactionData = await storage.addQuickReaction({
         proposalId: proposalId as string,
         userId: authenticatedReq.user!.id,
-        objection,
-        severity,
-        isResolved: false
+        reaction
       });
-      res.json(objectionData);
+      res.json(reactionData);
     } catch (error) {
-      console.error('Error adding objection:', error);
-      res.status(500).json({ message: 'Failed to add objection' });
+      console.error('Error adding reaction:', error);
+      res.status(500).json({ message: 'Failed to add reaction' });
     }
   } else {
     res.status(405).json({ message: 'Method not allowed' });
