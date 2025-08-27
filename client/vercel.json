@@ -5,6 +5,13 @@
     { "src": "/.*", "dest": "/index.html" }
   ],
   "functions": {
-    "api/**/*.ts": { "maxDuration": 30 }
+    "api/[...all].ts": {
+      "maxDuration": 30,
+      "includeFiles": "server/**"
+    },
+    "api/debug/imports.ts": {
+      "maxDuration": 10,
+      "includeFiles": "server/**"
+    }
   }
 }
