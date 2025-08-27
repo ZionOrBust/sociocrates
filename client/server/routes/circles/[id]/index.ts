@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "../../../lib/cors";
-import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../lib/auth";
-import { storage } from "../../../lib/storage";
+import { handleCors } from "../../../../api/lib/cors";
+import { authenticateToken, requireAuth, type AuthenticatedRequest } from "../../../../api/lib/auth";
+import { storage } from "../../../../api/lib/storage";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -25,12 +25,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // folder is [id], so the dynamic param is "id"
     const raw = (req.query as Record<string, string | string[]>)["id"];
-    const circleId = Array.isArray(raw) ? raw[0] : raw;
+    const id = Array.isArray(raw) ? raw[0] : raw;
 
-    const proposals = await storage.getProposalsByCircle(circleId as string);
-    return res.json(proposals);
+    const circle = await storage.getCircleById(id);
+    if (!circle) {
+      return res.status(404).json({ message: "Circle not found" });
+    }
+    return res.json(circle);
   } catch (error) {
-    console.error("Error fetching proposals:", error);
-    return res.status(500).json({ message: "Failed to fetch proposals" });
+    console.error("Error fetching circle:", error);
+    return res.status(500).json({ message: "Failed to fetch circle" });
   }
 }
