@@ -3,14 +3,11 @@ import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 
 const app = express();
-
-// Let proxies (Vercel) set req.ip, etc.
 app.set("trust proxy", true);
 
-// CORS (with preflight)
+// --- CORS with preflight ---
 app.use((req, res, next) => {
-  const origin = req.headers.origin || "*";
-  res.header("Access-Control-Allow-Origin", origin as string);
+  res.header("Access-Control-Allow-Origin", "*");
   res.header("Vary", "Origin");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
@@ -21,10 +18,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Minimal health check to verify API routing on Vercel
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-// API logging (only for /api/*)
+// --- API request logging ---
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -48,64 +42,55 @@ app.use((req, res, next) => {
   next();
 });
 
-async function buildApp() {
-  // Mount all API routes first
-  const server = await registerRoutes(app);
+// Optional: quick health check
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-  // Only set up Vite dev server in development.
+let nodeServer: import("http").Server | undefined;
+
+async function setup() {
+  // Mount all API routes and get the underlying Node server Vite expects
+  nodeServer = await registerRoutes(app);
+
   const isDevelopment = process.env.NODE_ENV === "development";
   log(`Environment: ${process.env.NODE_ENV}, Setting up ${isDevelopment ? "Vite dev server" : "static serving"}`);
 
   if (isDevelopment) {
-    await setupVite(app, server);
+    // Dev only – Vite middleware + websockets, needs the Node server instance
+    await setupVite(app, nodeServer);
   } else {
-    // IMPORTANT: serveStatic must NOT swallow /api/*.
-    // Ensure serveStatic only handles non-API front-end routes.
+    // Prod – serve built SPA; make sure this does NOT swallow /api/*
     serveStatic(app);
   }
 
-  // Error handler AFTER routes/static
+  // Error handler after routes/static
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
-    // Let Vercel capture logs without crashing the worker
     try { log(`Error ${status}: ${message}`); } catch {}
   });
-
-  return server;
 }
 
-// --- Vercel serverless export ---
-// Vercel's @vercel/node looks for a default export that is a handler (Express app works).
+// Run setup on module load so Vercel's serverless cold start initializes routes/static
+void setup();
+
+// ---- Export-only for Vercel ----
 export default app;
 
-// If run directly (local dev), start the HTTP server.
-if (import.meta && (import.meta as any).url) {
-  const isDirect =
-    typeof process !== "undefined" &&
-    process.argv[1] &&
-    (process.argv[1].endsWith("index.ts") || process.argv[1].endsWith("index.js"));
-
-  // Fallback check for CommonJS
-  const isCJSDirect = (typeof require !== "undefined" && require.main === module) as boolean | undefined;
-
-  if (isDirect || isCJSDirect) {
-    (async () => {
-      const server = await buildApp();
-      const port = parseInt(process.env.PORT || "5000", 10);
-      server.listen(
-        {
-          port,
-          host: "0.0.0.0",
-          reusePort: true,
-        },
+// ---- Local dev listener (NOT used on Vercel) ----
+if (!process.env.VERCEL) {
+  const port = parseInt(process.env.PORT || "5000", 10);
+  // If registerRoutes returned a server, prefer it (keeps your original pattern)
+  const start = () => {
+    if (nodeServer) {
+      nodeServer.listen(
+        { port, host: "0.0.0.0", reusePort: true },
         () => log(`🏛️ Sociocratic Decision App serving on port ${port}`)
       );
-    })();
-  }
-} else {
-  // In serverless/Vercel, we still need routes mounted.
-  // Build synchronously once on cold start.
-  void buildApp();
+    } else {
+      app.listen(port, "0.0.0.0", () => log(`🏛️ Sociocratic Decision App serving on port ${port}`));
+    }
+  };
+  // If setup() hasn’t finished yet, wait for it
+  Promise.resolve().then(start);
 }
