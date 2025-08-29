@@ -1,104 +1,113 @@
-// client/api/[...all].ts
+// api/[...all].ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const pathOnly = (req: VercelRequest) => new URL(req.url!, "http://x").pathname;
-const json = (res: VercelResponse, code: number, data: any) => res.status(code).json(data);
+// --- import your real handlers (adjust paths as you have them now) ---
+import authLogin from "../server/routes/auth/login";
+import authMe from "../server/routes/auth/me";
 
-// Centralized dynamic imports so we can test them
-const registry = {
-  circles_index: () => import("../_routes/circles/index"),
-  circles_id_index: () => import("../_routes/circles/_id/index"),
-  circles_id_proposals: () => import("../_routes/circles/_id/proposals"),
+import circlesIndex from "../server/routes/circles/index";
+import circleById from "../server/routes/circles/_id/index";
+import circleProposals from "../server/routes/circles/_id/proposals";
 
-  // Remove this line if you don't have proposals/index.ts:
-  proposals_index: () => import("../_routes/proposals/index"),
-  proposals_id_index: () => import("../_routes/proposals/_id/index"),
-  proposals_id_consent: () => import("../_routes/proposals/_id/consent"),
-  proposals_id_objections: () => import("../_routes/proposals/_id/objections"),
-  proposals_id_questions: () => import("../_routes/proposals/_id/questions"),
-  proposals_id_reactions: () => import("../_routes/proposals/_id/reactions"),
+import proposalsIndex from "../server/routes/proposals/index";
+import proposalById from "../server/routes/proposals/_id/index";
+import proposalConsent from "../server/routes/proposals/_id/consent";
+import proposalObjections from "../server/routes/proposals/_id/objections";
+import proposalQuestions from "../server/routes/proposals/_id/questions";
+import proposalReactions from "../server/routes/proposals/_id/reactions";
 
-  auth_login: () => import("../_routes/auth/login"),
-  auth_me: () => import("../_routes/auth/me"),
+// Utility: CORS headers (safe for same-origin too)
+function setCors(res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+}
+
+type Handler = (req: VercelRequest, res: VercelResponse) => any;
+
+// Router table: path -> method -> handler
+const routes: Record<string, Partial<Record<string, Handler>>> = {
+  // ---- AUTH ----
+  "/auth/login": {
+    POST: authLogin,
+
+    // TEMP: accept GET too and tell us if the client is (accidentally) using GET.
+    // Remove this once we confirm the method.
+    GET: (req, res) => {
+      setCors(res);
+      return res.status(200).json({
+        _debug: "Login hit via GET (client should POST). This is a TEMP debug shim.",
+        query: req.query,
+      });
+    },
+  },
+  "/auth/me": { GET: authMe },
+
+  // ---- CIRCLES ----
+  "/circles": { GET: circlesIndex },
+  "/circles/_id": { GET: circleById },
+  "/circles/_id/proposals": { GET: circleProposals },
+
+  // ---- PROPOSALS ----
+  "/proposals": { GET: proposalsIndex },
+  "/proposals/_id": { GET: proposalById },
+  "/proposals/_id/consent": { GET: proposalConsent, POST: proposalConsent },
+  "/proposals/_id/objections": { GET: proposalObjections, POST: proposalObjections },
+  "/proposals/_id/questions": { GET: proposalQuestions, POST: proposalQuestions },
+  "/proposals/_id/reactions": { GET: proposalReactions, POST: proposalReactions },
 };
 
+function normalizePath(parts: string[]): { key: string } {
+  // You already parse [...all]; convert ["auth","login"] -> "/auth/login"
+  const key = "/" + parts.join("/");
+  return { key };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const p = pathOnly(req);
-  const m = (req.method || "GET").toUpperCase();
+  setCors(res);
 
-  // ---------- DEBUG: hit /api/_debug/imports ----------
-  if (p === "/api/_debug/imports") {
-    const results: Record<string, { ok: boolean; error?: string }> = {};
-    for (const [key, importer] of Object.entries(registry)) {
-      try {
-        await importer();
-        results[key] = { ok: true };
-      } catch (e: any) {
-        console.error("IMPORT_FAIL_DEBUG", { key, err: e?.message });
-        results[key] = { ok: false, error: String(e?.message || e) };
-      }
-    }
-    return json(res, 200, results);
+  // Preflight short-circuit (prevents 405 on OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
   }
-  // ----------------------------------------------------
 
-  try {
-    // Circles
-    if (m === "GET" && p === "/api/circles") {
-      const mod = await registry.circles_index(); return (mod as any).default(req, res);
-    }
-    let m1 = p.match(/^\/api\/circles\/([^/]+)$/);
-    if (m1 && m === "GET") {
-      (req as any).query = { ...(req as any).query, id: m1[1] };
-      const mod = await registry.circles_id_index(); return (mod as any).default(req, res);
-    }
-    m1 = p.match(/^\/api\/circles\/([^/]+)\/proposals$/);
-    if (m1 && m === "GET") {
-      (req as any).query = { ...(req as any).query, id: m1[1] };
-      const mod = await registry.circles_id_proposals(); return (mod as any).default(req, res);
-    }
+  // Basic router logger (shows up in Vercel Function logs)
+  console.log("[ROUTER]", {
+    method: req.method,
+    url: req.url,
+    path: req.query?.all,
+    headers: {
+      // trim down noise; add more if needed
+      "content-type": req.headers["content-type"],
+      "user-agent": req.headers["user-agent"],
+      origin: req.headers["origin"],
+    },
+  });
 
-    // Proposals
-    if (m === "GET" && p === "/api/proposals") {
-      const mod = await registry.proposals_index(); return (mod as any).default(req, res);
-    }
-    let m2 = p.match(/^\/api\/proposals\/([^/]+)$/);
-    if (m2 && m === "GET") {
-      (req as any).query = { ...(req as any).query, id: m2[1] };
-      const mod = await registry.proposals_id_index(); return (mod as any).default(req, res);
-    }
-    m2 = p.match(/^\/api\/proposals\/([^/]+)\/consent$/);
-    if (m2 && (m === "GET" || m === "POST")) {
-      (req as any).query = { ...(req as any).query, id: m2[1] };
-      const mod = await registry.proposals_id_consent(); return (mod as any).default(req, res);
-    }
-    m2 = p.match(/^\/api\/proposals\/([^/]+)\/objections$/);
-    if (m2 && (m === "GET" || m === "POST")) {
-      (req as any).query = { ...(req as any).query, id: m2[1] };
-      const mod = await registry.proposals_id_objections(); return (mod as any).default(req, res);
-    }
-    m2 = p.match(/^\/api\/proposals\/([^/]+)\/questions$/);
-    if (m2 && (m === "GET" || m === "POST")) {
-      (req as any).query = { ...(req as any).query, id: m2[1] };
-      const mod = await registry.proposals_id_questions(); return (mod as any).default(req, res);
-    }
-    m2 = p.match(/^\/api\/proposals\/([^/]+)\/reactions$/);
-    if (m2 && (m === "GET" || m === "POST")) {
-      (req as any).query = { ...(req as any).query, id: m2[1] };
-      const mod = await registry.proposals_id_reactions(); return (mod as any).default(req, res);
-    }
+  const parts = Array.isArray(req.query.all) ? (req.query.all as string[]) : [];
+  const { key } = normalizePath(parts);
 
-    // Auth
-    if (p === "/api/auth/login" && m === "POST") {
-      const mod = await registry.auth_login(); return (mod as any).default(req, res);
-    }
-    if (p === "/api/auth/me" && m === "GET") {
-      const mod = await registry.auth_me(); return (mod as any).default(req, res);
-    }
+  const methodMap = routes[key];
 
-    return json(res, 404, { message: "Not found" });
-  } catch (err: any) {
-    console.error("ROUTER_RUNTIME_ERROR", err?.stack || err);
-    return json(res, 500, { message: "Internal error" });
+  // If route exists but method not allowed, send a detailed 405
+  if (methodMap && !methodMap[req.method!]) {
+    const allow = Object.keys(methodMap);
+    res.setHeader("Allow", allow.join(", "));
+    res.setHeader("X-Debug-Route", key);
+    return res.status(405).json({
+      message: "Method not allowed",
+      route: key,
+      got: req.method,
+      allow,
+    });
   }
+
+  // No route at all?
+  if (!methodMap) {
+    res.setHeader("X-Debug-Route", key);
+    return res.status(404).json({ message: "Not found", route: key });
+  }
+
+  // Dispatch
+  return methodMap[req.method!]?.(req, res);
 }
