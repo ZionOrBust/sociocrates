@@ -5,7 +5,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/[...all].ts"
+      "dest": "/client/api/[...all].ts"
     },
     {
       "handle": "filesystem"
@@ -16,7 +16,7 @@
     }
   ],
   "functions": {
-    "api/[...all].ts": {
+    "client/api/[...all].ts": {
       "maxDuration": 30,
       "includeFiles": "client/server/**"
     }
