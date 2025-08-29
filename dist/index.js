@@ -8,199 +8,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// shared/schema.ts
-var schema_exports = {};
-__export(schema_exports, {
-  circleMemberships: () => circleMemberships,
-  circles: () => circles,
-  circlesRelations: () => circlesRelations,
-  clarifyingQuestions: () => clarifyingQuestions,
-  consentChoiceEnum: () => consentChoiceEnum,
-  consentResponses: () => consentResponses,
-  insertCircleSchema: () => insertCircleSchema,
-  insertClarifyingQuestionSchema: () => insertClarifyingQuestionSchema,
-  insertConsentResponseSchema: () => insertConsentResponseSchema,
-  insertObjectionSchema: () => insertObjectionSchema,
-  insertProposalSchema: () => insertProposalSchema,
-  insertQuickReactionSchema: () => insertQuickReactionSchema,
-  insertUserSchema: () => insertUserSchema,
-  objectionResolutions: () => objectionResolutions,
-  objectionSeverityEnum: () => objectionSeverityEnum,
-  objections: () => objections,
-  processLogs: () => processLogs,
-  processStepEnum: () => processStepEnum,
-  proposalStatusEnum: () => proposalStatusEnum,
-  proposals: () => proposals,
-  proposalsRelations: () => proposalsRelations,
-  quickReactions: () => quickReactions,
-  selectCircleSchema: () => selectCircleSchema,
-  selectProposalSchema: () => selectProposalSchema,
-  selectUserSchema: () => selectUserSchema,
-  stepTimings: () => stepTimings,
-  userRoleEnum: () => userRoleEnum,
-  users: () => users,
-  usersRelations: () => usersRelations
-});
-import { pgTable, varchar, text, timestamp, boolean, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
-var userRoleEnum, proposalStatusEnum, objectionSeverityEnum, consentChoiceEnum, processStepEnum, users, circles, circleMemberships, stepTimings, proposals, clarifyingQuestions, quickReactions, objections, objectionResolutions, consentResponses, processLogs, usersRelations, circlesRelations, proposalsRelations, insertUserSchema, selectUserSchema, insertCircleSchema, selectCircleSchema, insertProposalSchema, selectProposalSchema, insertClarifyingQuestionSchema, insertQuickReactionSchema, insertObjectionSchema, insertConsentResponseSchema;
-var init_schema = __esm({
-  "shared/schema.ts"() {
-    "use strict";
-    userRoleEnum = pgEnum("user_role", ["admin", "participant", "observer"]);
-    proposalStatusEnum = pgEnum("proposal_status", ["draft", "active", "pending_consent", "resolved", "archived"]);
-    objectionSeverityEnum = pgEnum("objection_severity", ["minor_concern", "major_concern", "deal_breaker"]);
-    consentChoiceEnum = pgEnum("consent_choice", ["consent", "consent_with_reservations", "withhold_consent"]);
-    processStepEnum = pgEnum("process_step", [
-      "proposal_presentation",
-      "clarifying_questions",
-      "quick_reactions",
-      "objections_round",
-      "resolve_objections",
-      "consent_round",
-      "record_outcome"
-    ]);
-    users = pgTable("users", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      email: varchar("email", { length: 255 }).notNull().unique(),
-      password: varchar("password", { length: 255 }).notNull(),
-      name: varchar("name", { length: 255 }).notNull(),
-      role: userRoleEnum("role").default("participant").notNull(),
-      isActive: boolean("is_active").default(true).notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull()
-    });
-    circles = pgTable("circles", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      name: varchar("name", { length: 255 }).notNull(),
-      description: text("description"),
-      createdBy: uuid("created_by").references(() => users.id).notNull(),
-      isActive: boolean("is_active").default(true).notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull()
-    });
-    circleMemberships = pgTable("circle_memberships", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      circleId: uuid("circle_id").references(() => circles.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      role: userRoleEnum("role").default("participant").notNull(),
-      // Can override user's global role within this circle
-      joinedAt: timestamp("joined_at").defaultNow().notNull()
-    });
-    stepTimings = pgTable("step_timings", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      circleId: uuid("circle_id").references(() => circles.id).notNull(),
-      proposalPresentation: integer("proposal_presentation").default(300).notNull(),
-      // seconds
-      clarifyingQuestions: integer("clarifying_questions").default(600).notNull(),
-      quickReactions: integer("quick_reactions").default(300).notNull(),
-      objectionsRound: integer("objections_round").default(600).notNull(),
-      resolveObjections: integer("resolve_objections").default(900).notNull(),
-      consentRound: integer("consent_round").default(300).notNull(),
-      recordOutcome: integer("record_outcome").default(180).notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull()
-    });
-    proposals = pgTable("proposals", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      title: varchar("title", { length: 255 }).notNull(),
-      description: text("description").notNull(),
-      circleId: uuid("circle_id").references(() => circles.id).notNull(),
-      createdBy: uuid("created_by").references(() => users.id).notNull(),
-      status: proposalStatusEnum("status").default("draft").notNull(),
-      currentStep: processStepEnum("current_step").default("proposal_presentation"),
-      stepStartTime: timestamp("step_start_time"),
-      stepEndTime: timestamp("step_end_time"),
-      isActive: boolean("is_active").default(true).notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull()
-    });
-    clarifyingQuestions = pgTable("clarifying_questions", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      proposalId: uuid("proposal_id").references(() => proposals.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      question: text("question").notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    quickReactions = pgTable("quick_reactions", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      proposalId: uuid("proposal_id").references(() => proposals.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      reaction: varchar("reaction", { length: 300 }).notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    objections = pgTable("objections", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      proposalId: uuid("proposal_id").references(() => proposals.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      objection: text("objection").notNull(),
-      severity: objectionSeverityEnum("severity").notNull(),
-      isResolved: boolean("is_resolved").default(false).notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    objectionResolutions = pgTable("objection_resolutions", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      objectionId: uuid("objection_id").references(() => objections.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      solution: text("solution").notNull(),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    consentResponses = pgTable("consent_responses", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      proposalId: uuid("proposal_id").references(() => proposals.id).notNull(),
-      userId: uuid("user_id").references(() => users.id).notNull(),
-      choice: consentChoiceEnum("choice").notNull(),
-      reason: text("reason"),
-      // Required if withholding consent or consenting with reservations
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    processLogs = pgTable("process_logs", {
-      id: uuid("id").primaryKey().defaultRandom(),
-      proposalId: uuid("proposal_id").references(() => proposals.id).notNull(),
-      step: processStepEnum("step").notNull(),
-      action: varchar("action", { length: 255 }).notNull(),
-      userId: uuid("user_id").references(() => users.id),
-      details: text("details"),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    usersRelations = relations(users, ({ many }) => ({
-      proposals: many(proposals),
-      circleMemberships: many(circleMemberships),
-      clarifyingQuestions: many(clarifyingQuestions),
-      quickReactions: many(quickReactions),
-      objections: many(objections),
-      objectionResolutions: many(objectionResolutions),
-      consentResponses: many(consentResponses)
-    }));
-    circlesRelations = relations(circles, ({ one, many }) => ({
-      createdBy: one(users, { fields: [circles.createdBy], references: [users.id] }),
-      memberships: many(circleMemberships),
-      proposals: many(proposals),
-      stepTimings: many(stepTimings)
-    }));
-    proposalsRelations = relations(proposals, ({ one, many }) => ({
-      createdBy: one(users, { fields: [proposals.createdBy], references: [users.id] }),
-      circle: one(circles, { fields: [proposals.circleId], references: [circles.id] }),
-      clarifyingQuestions: many(clarifyingQuestions),
-      quickReactions: many(quickReactions),
-      objections: many(objections),
-      consentResponses: many(consentResponses),
-      processLogs: many(processLogs)
-    }));
-    insertUserSchema = createInsertSchema(users);
-    selectUserSchema = createSelectSchema(users);
-    insertCircleSchema = createInsertSchema(circles);
-    selectCircleSchema = createSelectSchema(circles);
-    insertProposalSchema = createInsertSchema(proposals);
-    selectProposalSchema = createSelectSchema(proposals);
-    insertClarifyingQuestionSchema = createInsertSchema(clarifyingQuestions);
-    insertQuickReactionSchema = createInsertSchema(quickReactions);
-    insertObjectionSchema = createInsertSchema(objections);
-    insertConsentResponseSchema = createInsertSchema(consentResponses);
-  }
-});
-
-// server/db.ts
+// client/server/db.ts
 var db_exports = {};
 __export(db_exports, {
   db: () => db,
@@ -209,11 +17,11 @@ __export(db_exports, {
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import ws from "ws";
+import * as schema from "@shared/schema";
 var pool, db;
 var init_db = __esm({
-  "server/db.ts"() {
+  "client/server/db.ts"() {
     "use strict";
-    init_schema();
     neonConfig.webSocketConstructor = ws;
     pool = null;
     db = null;
@@ -222,7 +30,7 @@ var init_db = __esm({
     } else {
       try {
         pool = new Pool({ connectionString: process.env.DATABASE_URL });
-        db = drizzle({ client: pool, schema: schema_exports });
+        db = drizzle({ client: pool, schema });
         console.log("\u2705 Database connected successfully");
       } catch (error) {
         console.warn("\u274C Failed to connect to database:", error.message);
@@ -231,14 +39,23 @@ var init_db = __esm({
   }
 });
 
-// server/index.ts
+// client/server/index.ts
 import express2 from "express";
 
-// server/routes.ts
+// client/server/routes.ts
 import { createServer } from "http";
 
-// server/storage.ts
-init_schema();
+// client/server/storage.ts
+import {
+  users,
+  circles,
+  proposals,
+  circleMemberships,
+  clarifyingQuestions,
+  quickReactions,
+  objections,
+  consentResponses
+} from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -584,7 +401,7 @@ var DevelopmentStorage = class {
 };
 var storage = db2 ? new DatabaseStorage() : new DevelopmentStorage();
 
-// server/routes.ts
+// client/server/routes.ts
 import jwt from "jsonwebtoken";
 var JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 var authenticateToken = async (req, res, next) => {
@@ -893,20 +710,20 @@ async function registerRoutes(app2) {
   return httpServer;
 }
 
-// server/vite.ts
+// client/server/vite.ts
 import { createServer as createViteServer } from "vite";
 import express from "express";
 import { fileURLToPath } from "url";
 import path from "path";
 var __dirname = path.dirname(fileURLToPath(import.meta.url));
 function log(message) {
-  const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+  const timestamp = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
     hour12: false,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit"
   });
-  console.log(`${timestamp2} [express] ${message}`);
+  console.log(`${timestamp} [express] ${message}`);
 }
 async function setupVite(app2, server) {
   try {
@@ -943,7 +760,7 @@ function serveStatic(app2) {
   });
 }
 
-// server/index.ts
+// client/server/index.ts
 var app = express2();
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
