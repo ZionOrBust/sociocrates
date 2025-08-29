@@ -1,18 +1,10 @@
 {
   "version": 2,
-
   "routes": [
-    // 1) Let /api/* hit serverless functions BEFORE the SPA fallback
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
-
-    // 2) Serve real files if they exist
     { "handle": "filesystem" },
-
-    // 3) Everything else -> SPA index.html
     { "src": "^(?!/api/).*$", "dest": "/index.html" }
   ],
-
-  // Ensure your functions stay bundled (adjust only if you change your function filenames/paths)
   "functions": {
     "api/[...all].ts": {
       "maxDuration": 30,
