@@ -67,7 +67,12 @@ app.use((req, res, next) => {
   log(`Environment: ${process.env.NODE_ENV}, Setting up ${isDevelopment ? 'Vite dev server' : 'static serving'}`);
 
   if (isDevelopment) {
-    await setupVite(app, server);
+    try {
+      await setupVite(app, server);
+    } catch (error) {
+      log(`⚠️ Vite setup failed, falling back to static serving: ${error.message}`);
+      serveStatic(app);
+    }
   } else {
     serveStatic(app);
   }
@@ -77,6 +82,30 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+
+  // Add graceful shutdown handlers
+  const gracefulShutdown = () => {
+    log('Received shutdown signal, closing server gracefully...');
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+
+    // Force exit after 10 seconds
+    setTimeout(() => {
+      log('Force closing server');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+  process.on('uncaughtException', (error) => {
+    log(`Uncaught exception: ${error.message}`);
+    console.error(error);
+    gracefulShutdown();
+  });
+
   server.listen({
     port,
     host: "0.0.0.0",
@@ -84,4 +113,10 @@ app.use((req, res, next) => {
   }, () => {
     log(`🏛️ Sociocratic Decision App serving on port ${port}`);
   });
+
+  // Keep the process alive and handle hanging
+  setInterval(() => {
+    const memUsage = process.memoryUsage();
+    log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+  }, 60000); // Log memory usage every minute
 })();
