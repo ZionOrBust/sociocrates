@@ -809,11 +809,34 @@ app.use((req, res, next) => {
   const isDevelopment = process.env.NODE_ENV === "development";
   log(`Environment: ${process.env.NODE_ENV}, Setting up ${isDevelopment ? "Vite dev server" : "static serving"}`);
   if (isDevelopment) {
-    await setupVite(app, server);
+    try {
+      await setupVite(app, server);
+    } catch (error) {
+      log(`\u26A0\uFE0F Vite setup failed, falling back to static serving: ${error.message}`);
+      serveStatic(app);
+    }
   } else {
     serveStatic(app);
   }
   const port = parseInt(process.env.PORT || "5000", 10);
+  const gracefulShutdown = () => {
+    log("Received shutdown signal, closing server gracefully...");
+    server.close(() => {
+      log("Server closed");
+      process.exit(0);
+    });
+    setTimeout(() => {
+      log("Force closing server");
+      process.exit(1);
+    }, 1e4);
+  };
+  process.on("SIGTERM", gracefulShutdown);
+  process.on("SIGINT", gracefulShutdown);
+  process.on("uncaughtException", (error) => {
+    log(`Uncaught exception: ${error.message}`);
+    console.error(error);
+    gracefulShutdown();
+  });
   server.listen({
     port,
     host: "0.0.0.0",
@@ -821,4 +844,8 @@ app.use((req, res, next) => {
   }, () => {
     log(`\u{1F3DB}\uFE0F Sociocratic Decision App serving on port ${port}`);
   });
+  setInterval(() => {
+    const memUsage = process.memoryUsage();
+    log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+  }, 6e4);
 })();
