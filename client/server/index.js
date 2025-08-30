@@ -49,6 +49,44 @@ const users = [
   { id: '2', email: 'demo@sociocracy.org', password: 'password', name: 'Demo User', role: 'participant' }
 ];
 
+// Demo circles data
+const circles = [
+  {
+    id: '1',
+    name: 'Main Circle',
+    description: 'Primary decision-making circle for our community',
+    createdBy: '1',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: '2',
+    name: 'Housing Circle',
+    description: 'Decisions related to housing and infrastructure',
+    createdBy: '1',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Demo proposals data
+const proposals = [
+  {
+    id: '1',
+    title: 'Community Garden Proposal',
+    description: 'Create a shared organic garden space for all residents',
+    circleId: '1',
+    createdBy: '1',
+    status: 'draft',
+    currentStep: 'proposal_presentation',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 // Health check
 app.get('/api/ping', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -76,7 +114,8 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -87,17 +126,165 @@ app.get('/api/auth/me', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = users.find(u => u.id === decoded.userId);
-    
+
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
-    
-    res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role }
-    });
+
+    req.user = user;
+    next();
   } catch (error) {
     return res.status(403).json({ message: 'Invalid token' });
   }
+};
+
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+  res.json({
+    user: { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role }
+  });
+});
+
+// Circles endpoints
+app.get('/api/circles', authenticateToken, (req, res) => {
+  try {
+    // Return all circles for now (can add filtering based on user role later)
+    res.json(circles);
+  } catch (error) {
+    log(`Error fetching circles: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch circles' });
+  }
+});
+
+app.post('/api/circles', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { name, description } = req.body;
+    const newCircle = {
+      id: String(circles.length + 1),
+      name,
+      description,
+      createdBy: req.user.id,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    circles.push(newCircle);
+    res.json(newCircle);
+  } catch (error) {
+    log(`Error creating circle: ${error.message}`);
+    res.status(500).json({ message: 'Failed to create circle' });
+  }
+});
+
+app.get('/api/circles/:id', authenticateToken, (req, res) => {
+  try {
+    const circle = circles.find(c => c.id === req.params.id);
+    if (!circle) {
+      return res.status(404).json({ message: 'Circle not found' });
+    }
+    res.json(circle);
+  } catch (error) {
+    log(`Error fetching circle: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch circle' });
+  }
+});
+
+// Proposals endpoints
+app.get('/api/circles/:circleId/proposals', authenticateToken, (req, res) => {
+  try {
+    const circleProposals = proposals.filter(p => p.circleId === req.params.circleId);
+    res.json(circleProposals);
+  } catch (error) {
+    log(`Error fetching proposals: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch proposals' });
+  }
+});
+
+app.get('/api/proposals', authenticateToken, (req, res) => {
+  try {
+    res.json(proposals);
+  } catch (error) {
+    log(`Error fetching proposals: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch proposals' });
+  }
+});
+
+app.post('/api/proposals', authenticateToken, (req, res) => {
+  try {
+    const { title, description, circleId } = req.body;
+    const newProposal = {
+      id: String(proposals.length + 1),
+      title,
+      description,
+      circleId,
+      createdBy: req.user.id,
+      status: 'draft',
+      currentStep: 'proposal_presentation',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    proposals.push(newProposal);
+    res.json(newProposal);
+  } catch (error) {
+    log(`Error creating proposal: ${error.message}`);
+    res.status(500).json({ message: 'Failed to create proposal' });
+  }
+});
+
+app.get('/api/proposals/:id', authenticateToken, (req, res) => {
+  try {
+    const proposal = proposals.find(p => p.id === req.params.id);
+    if (!proposal) {
+      return res.status(404).json({ message: 'Proposal not found' });
+    }
+    res.json(proposal);
+  } catch (error) {
+    log(`Error fetching proposal: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch proposal' });
+  }
+});
+
+// Proposal process endpoints (simplified)
+app.get('/api/proposals/:proposalId/questions', authenticateToken, (req, res) => {
+  res.json([]); // Return empty array for now
+});
+
+app.post('/api/proposals/:proposalId/questions', authenticateToken, (req, res) => {
+  const { question } = req.body;
+  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, question, createdAt: new Date().toISOString() });
+});
+
+app.get('/api/proposals/:proposalId/reactions', authenticateToken, (req, res) => {
+  res.json([]); // Return empty array for now
+});
+
+app.post('/api/proposals/:proposalId/reactions', authenticateToken, (req, res) => {
+  const { reaction } = req.body;
+  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, reaction, createdAt: new Date().toISOString() });
+});
+
+app.get('/api/proposals/:proposalId/objections', authenticateToken, (req, res) => {
+  res.json([]); // Return empty array for now
+});
+
+app.post('/api/proposals/:proposalId/objections', authenticateToken, (req, res) => {
+  const { objection, severity } = req.body;
+  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, objection, severity, isResolved: false, createdAt: new Date().toISOString() });
+});
+
+app.get('/api/proposals/:proposalId/consent', authenticateToken, (req, res) => {
+  res.json([]); // Return empty array for now
+});
+
+app.post('/api/proposals/:proposalId/consent', authenticateToken, (req, res) => {
+  const { choice, reason } = req.body;
+  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
 });
 
 // Static file serving for production
