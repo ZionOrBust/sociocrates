@@ -226,6 +226,57 @@ app.post('/proposals/:proposalId/consent', authenticateToken, (req, res) => {
   res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
 });
 
+// Admin endpoints
+app.get('/admin/users', authenticateToken, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  res.json(users.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role })));
+});
+
+app.get('/admin/users/:id', authenticateToken, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const user = users.find(u => u.id === req.params.id);
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+});
+
+app.put('/admin/users/:id', authenticateToken, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const userIndex = users.findIndex(u => u.id === req.params.id);
+  if (userIndex === -1) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  const { name, email, role } = req.body;
+  users[userIndex] = { ...users[userIndex], name, email, role };
+
+  res.json({ id: users[userIndex].id, email: users[userIndex].email, name: users[userIndex].name, role: users[userIndex].role });
+});
+
+app.delete('/admin/users/:id', authenticateToken, (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  const userIndex = users.findIndex(u => u.id === req.params.id);
+  if (userIndex === -1) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  users.splice(userIndex, 1);
+  res.json({ message: 'User deleted' });
+});
+
 // Catch-all for unknown API routes
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
