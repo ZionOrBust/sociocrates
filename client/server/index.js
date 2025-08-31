@@ -287,6 +287,77 @@ app.post('/api/proposals/:proposalId/consent', authenticateToken, (req, res) => 
   res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
 });
 
+// Admin endpoints
+app.get('/api/admin/users', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    res.json(users.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role })));
+  } catch (error) {
+    log(`Error fetching users: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
+});
+
+app.get('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const user = users.find(u => u.id === req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  } catch (error) {
+    log(`Error fetching user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch user' });
+  }
+});
+
+app.put('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const userIndex = users.findIndex(u => u.id === req.params.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const { name, email, role } = req.body;
+    users[userIndex] = { ...users[userIndex], name, email, role };
+
+    res.json({ id: users[userIndex].id, email: users[userIndex].email, name: users[userIndex].name, role: users[userIndex].role });
+  } catch (error) {
+    log(`Error updating user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const userIndex = users.findIndex(u => u.id === req.params.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    users.splice(userIndex, 1);
+    res.json({ message: 'User deleted' });
+  } catch (error) {
+    log(`Error deleting user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
+});
+
 // Static file serving for production
 const distPath = path.resolve(__dirname, "../dist");
 app.use(express.static(distPath));
