@@ -279,7 +279,12 @@ app.post('/api/proposals/:proposalId/reactions', authenticateToken, (req, res) =
 });
 
 app.get('/api/proposals/:proposalId/objections', authenticateToken, (req, res) => {
-  res.json([]); // Return empty array for now
+  try {
+    res.json([]); // Return empty array for now
+  } catch (error) {
+    log(`Error fetching objections: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch objections' });
+  }
 });
 
 app.post('/api/proposals/:proposalId/objections', authenticateToken, (req, res) => {
