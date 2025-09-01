@@ -61,7 +61,7 @@ const circles = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: '2',
+    id: '2', 
     name: 'Housing Circle',
     description: 'Decisions related to housing and infrastructure',
     createdBy: '1',
@@ -87,9 +87,38 @@ const proposals = [
   }
 ];
 
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = users.find(u => u.id === decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid token' });
+  }
+};
+
 // Health check
 app.get('/api/ping', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  try {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (error) {
+    log(`Error in ping: ${error.message}`);
+    res.status(500).json({ message: 'Health check failed' });
+  }
 });
 
 // Auth endpoints
@@ -109,45 +138,25 @@ app.post('/api/auth/login', async (req, res) => {
       token
     });
   } catch (error) {
-    log(`Login error: ${error.message}`);
+    log(`Error in login: ${error.message}`);
     res.status(500).json({ message: 'Login failed' });
   }
 });
 
-// Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = users.find(u => u.id === decoded.userId);
-
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid token' });
-  }
-};
-
 app.get('/api/auth/me', authenticateToken, (req, res) => {
-  res.json({
-    user: { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role }
-  });
+  try {
+    res.json({
+      user: { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role }
+    });
+  } catch (error) {
+    log(`Error fetching user profile: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch user profile' });
+  }
 });
 
 // Circles endpoints
 app.get('/api/circles', authenticateToken, (req, res) => {
   try {
-    // Return all circles for now (can add filtering based on user role later)
     res.json(circles);
   } catch (error) {
     log(`Error fetching circles: ${error.message}`);
@@ -171,7 +180,7 @@ app.post('/api/circles', authenticateToken, (req, res) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-
+    
     circles.push(newCircle);
     res.json(newCircle);
   } catch (error) {
@@ -193,7 +202,7 @@ app.get('/api/circles/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Proposals endpoints
+// Proposals endpoints  
 app.get('/api/circles/:circleId/proposals', authenticateToken, (req, res) => {
   try {
     const circleProposals = proposals.filter(p => p.circleId === req.params.circleId);
@@ -285,6 +294,77 @@ app.get('/api/proposals/:proposalId/consent', authenticateToken, (req, res) => {
 app.post('/api/proposals/:proposalId/consent', authenticateToken, (req, res) => {
   const { choice, reason } = req.body;
   res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
+});
+
+// Admin endpoints
+app.get('/api/admin/users', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    res.json(users.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role })));
+  } catch (error) {
+    log(`Error fetching users: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
+});
+
+app.get('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const user = users.find(u => u.id === req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  } catch (error) {
+    log(`Error fetching user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to fetch user' });
+  }
+});
+
+app.put('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const userIndex = users.findIndex(u => u.id === req.params.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const { name, email, role } = req.body;
+    users[userIndex] = { ...users[userIndex], name, email, role };
+    
+    res.json({ id: users[userIndex].id, email: users[userIndex].email, name: users[userIndex].name, role: users[userIndex].role });
+  } catch (error) {
+    log(`Error updating user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const userIndex = users.findIndex(u => u.id === req.params.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    users.splice(userIndex, 1);
+    res.json({ message: 'User deleted' });
+  } catch (error) {
+    log(`Error deleting user: ${error.message}`);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
 });
 
 // Static file serving for production
