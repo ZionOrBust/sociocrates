@@ -22,6 +22,7 @@ interface Proposal {
   stepEndTime: string | null;
   createdAt: string;
   createdBy: string;
+  isActive: boolean;
 }
 
 export default function Dashboard() {
@@ -61,7 +62,7 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const activeProposals = proposals.filter(p => p.status === 'active');
+  const activeProposals = proposals.filter(p => p.isActive);
   const pendingProposals = proposals.filter(p => p.status === 'pending_consent');
   const myProposals = proposals.filter(p => p.createdBy === user?.id);
 
@@ -202,9 +203,11 @@ export default function Dashboard() {
                         Created {formatDateTime(circle.createdAt)}
                       </span>
                       <div className="space-x-2">
-                        <Button size="sm" variant="outline">
-                          View Circle
-                        </Button>
+                        <Link href={`/circles/${circle.id}`}>
+                          <Button size="sm" variant="outline">
+                            View Circle
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
