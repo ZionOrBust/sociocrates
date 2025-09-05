@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Proposal from './pages/Proposal';
 import Admin from './pages/Admin';
 import CreateProposal from './pages/CreateProposal';
+import Circle from './pages/Circle';
 import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/toaster';
 
@@ -43,6 +44,7 @@ function AppContent() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/proposal/:id" component={Proposal} />
           <Route path="/create-proposal" component={CreateProposal} />
+          <Route path="/circles/:id" component={Circle} />
           {user.role === 'admin' && <Route path="/admin" component={Admin} />}
           <Route>
             <div className="text-center py-8">
