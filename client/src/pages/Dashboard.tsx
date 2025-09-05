@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useAuth, useApi } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,11 +84,9 @@ export default function Dashboard() {
             Welcome back, {user?.name}. Here's what's happening in your circles.
           </p>
         </div>
-        <Button asChild className="flex items-center space-x-2">
-          <Link href="/create-proposal">
-            <Plus className="w-4 h-4" />
-            <span>New Proposal</span>
-          </Link>
+        <Button className="flex items-center space-x-2" onClick={() => setLocation('/create-proposal')}>
+          <Plus className="w-4 h-4" />
+          <span>New Proposal</span>
         </Button>
       </div>
 
@@ -165,8 +164,8 @@ export default function Dashboard() {
                       <span>{formatDateTime(proposal.createdAt)}</span>
                     </div>
                     <div className="mt-3 flex justify-end">
-                      <Button asChild size="sm">
-                        <Link href={`/proposal/${proposal.id}`}>View Details</Link>
+                      <Button size="sm" onClick={() => setLocation(`/proposal/${proposal.id}`)}>
+                        View Details
                       </Button>
                     </div>
                   </CardContent>
@@ -201,8 +200,8 @@ export default function Dashboard() {
                         Created {formatDateTime(circle.createdAt)}
                       </span>
                       <div className="space-x-2">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/circles/${circle.id}`}>View Circle</Link>
+                        <Button size="sm" variant="outline" onClick={() => setLocation(`/circles/${circle.id}`)}>
+                          View Circle
                         </Button>
                       </div>
                     </div>
