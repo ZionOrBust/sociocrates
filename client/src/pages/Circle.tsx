@@ -82,9 +82,9 @@ export default function CirclePage() {
             <p className="text-gray-600 mt-1">{circle.description}</p>
           )}
         </div>
-        <Link href="/create-proposal">
-          <Button>New Proposal</Button>
-        </Link>
+        <Button asChild>
+          <Link href="/create-proposal">New Proposal</Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -117,9 +117,9 @@ export default function CirclePage() {
                       <span>{formatDateTime(proposal.createdAt)}</span>
                     </div>
                     <div className="mt-3 flex justify-end">
-                      <Link href={`/proposal/${proposal.id}`}>
-                        <Button size="sm">View Details</Button>
-                      </Link>
+                      <Button asChild size="sm">
+                        <Link href={`/proposal/${proposal.id}`}>View Details</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -146,9 +146,9 @@ export default function CirclePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-end">
-                      <Link href={`/proposal/${proposal.id}`}>
-                        <Button size="sm" variant="outline">Open</Button>
-                      </Link>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/proposal/${proposal.id}`}>Open</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
