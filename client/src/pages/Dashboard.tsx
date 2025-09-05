@@ -83,12 +83,12 @@ export default function Dashboard() {
             Welcome back, {user?.name}. Here's what's happening in your circles.
           </p>
         </div>
-        <Link href="/create-proposal">
-          <Button className="flex items-center space-x-2">
+        <Button asChild className="flex items-center space-x-2">
+          <Link href="/create-proposal">
             <Plus className="w-4 h-4" />
             <span>New Proposal</span>
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -165,11 +165,9 @@ export default function Dashboard() {
                       <span>{formatDateTime(proposal.createdAt)}</span>
                     </div>
                     <div className="mt-3 flex justify-end">
-                      <Link href={`/proposal/${proposal.id}`}>
-                        <Button size="sm">
-                          View Details
-                        </Button>
-                      </Link>
+                      <Button asChild size="sm">
+                        <Link href={`/proposal/${proposal.id}`}>View Details</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -203,11 +201,9 @@ export default function Dashboard() {
                         Created {formatDateTime(circle.createdAt)}
                       </span>
                       <div className="space-x-2">
-                        <Link href={`/circles/${circle.id}`}>
-                          <Button size="sm" variant="outline">
-                            View Circle
-                          </Button>
-                        </Link>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/circles/${circle.id}`}>View Circle</Link>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
