@@ -62,7 +62,7 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const activeProposals = proposals.filter(p => p.isActive);
+  const activeProposals = proposals.filter(p => (typeof p.isActive === 'boolean' ? p.isActive : (p.status !== 'resolved' && p.status !== 'archived')));
   const pendingProposals = proposals.filter(p => p.status === 'pending_consent');
   const myProposals = proposals.filter(p => p.createdBy === user?.id);
 
