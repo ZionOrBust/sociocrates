@@ -71,7 +71,7 @@ export default function CirclePage() {
     );
   }
 
-  const activeProposals = proposals.filter(p => p.isActive);
+  const activeProposals = proposals.filter(p => (typeof p.isActive === 'boolean' ? p.isActive : (p.status !== 'resolved' && p.status !== 'archived')));
 
   return (
     <div className="space-y-8">
