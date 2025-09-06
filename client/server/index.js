@@ -222,7 +222,7 @@ app.post('/api/proposals', authenticateToken, (req, res) => {
       description,
       circleId,
       createdBy: req.user.id,
-      status: 'draft',
+      status: 'active',
       currentStep: 'proposal_presentation',
       isActive: true,
       createdAt: new Date().toISOString(),
