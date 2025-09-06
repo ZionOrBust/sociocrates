@@ -200,8 +200,8 @@ export default function Dashboard() {
                         Created {formatDateTime(circle.createdAt)}
                       </span>
                       <div className="space-x-2">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/circles/${circle.id}`}>View Circle</Link>
+                        <Button size="sm" variant="outline" onClick={() => setLocation(`/circles/${circle.id}`)}>
+                          View Circle
                         </Button>
                       </div>
                     </div>
