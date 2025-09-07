@@ -200,9 +200,9 @@ export default function Dashboard() {
                         Created {formatDateTime(circle.createdAt)}
                       </span>
                       <div className="space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => setLocation(`/circles/${circle.id}`)}>
+                        <Link href={`/circles/${circle.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3">
                           View Circle
-                        </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
