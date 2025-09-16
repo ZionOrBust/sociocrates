@@ -1,7 +1,7 @@
-import { createServer as createViteServer } from "vite";
 import express, { type Express } from "express";
 import type { Server } from "http";
 import path from "path";
+import { createRequire } from "module";
 
 // IMPORTANT: When bundling, __dirname becomes the dist folder.
 // Use process.cwd() to reliably reference the project root.
@@ -17,10 +17,21 @@ export function log(message: string) {
   console.log(`${timestamp} [express] ${message}`);
 }
 
+async function getViteCreateServer() {
+  // Resolve Vite from the client's node_modules to avoid root resolution issues
+  const requireFromClient = createRequire(path.resolve(projectRoot, "client/package.json"));
+  const vitePkgPath = requireFromClient.resolve("vite/package.json");
+  const viteRoot = path.dirname(vitePkgPath);
+  const viteEntry = path.resolve(viteRoot, "dist/node/index.js");
+  const vite = await import(viteEntry);
+  return vite.createServer as typeof import("vite").createServer;
+}
+
 export async function setupVite(app: Express, server: Server) {
   try {
     log("Setting up Vite development server...");
 
+    const createViteServer = await getViteCreateServer();
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -31,7 +42,7 @@ export async function setupVite(app: Express, server: Server) {
       configFile: path.resolve(projectRoot, "client/vite.config.ts"),
       clearScreen: false,
       optimizeDeps: {
-        include: ['react', 'react-dom']
+        include: ["react", "react-dom"]
       }
     });
 
