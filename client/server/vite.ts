@@ -1,10 +1,11 @@
 import { createServer as createViteServer } from "vite";
 import express, { type Express } from "express";
 import type { Server } from "http";
-import { fileURLToPath } from "url";
 import path from "path";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// IMPORTANT: When bundling, __dirname becomes the dist folder.
+// Use process.cwd() to reliably reference the project root.
+const projectRoot = process.cwd();
 
 export function log(message: string) {
   const timestamp = new Date().toLocaleTimeString("en-US", {
@@ -26,7 +27,8 @@ export async function setupVite(app: Express, server: Server) {
         hmr: false // Disable HMR to fix connection issues
       },
       appType: "spa",
-      configFile: path.resolve(__dirname, "../vite.config.ts"),
+      // Always point to the client vite config from project root
+      configFile: path.resolve(projectRoot, "client/vite.config.ts"),
       clearScreen: false,
       optimizeDeps: {
         include: ['react', 'react-dom']
@@ -37,25 +39,26 @@ export async function setupVite(app: Express, server: Server) {
     app.use(vite.middlewares);
 
     log("✅ Vite development server ready");
-  } catch (error) {
+  } catch (error: any) {
     log(`❌ Vite setup failed: ${error.message}`);
     throw error;
   }
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "../dist");
+  // Serve the built client from client/dist when not in dev
+  const distPath = path.resolve(projectRoot, "client/dist");
 
   // Serve static assets from /app/
   app.use("/app", express.static(distPath));
 
   // Handle SPA routing for /app/* routes
-  app.use("/app/*", (req, res) => {
+  app.use("/app/*", (_req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 
   // Fallback for root /app route
-  app.use("/app", (req, res) => {
+  app.use("/app", (_req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
