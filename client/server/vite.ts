@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import type { Server } from "http";
 import path from "path";
+import fs from "fs";
 import { createRequire } from "module";
 
 // IMPORTANT: When bundling, __dirname becomes the dist folder.
@@ -59,17 +60,42 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   // Serve the built client from client/dist when not in dev
   const distPath = path.resolve(projectRoot, "client/dist");
+  const indexHtml = path.join(distPath, "index.html");
+
+  // Always provide a root redirect to /app
+  app.get(["/", ""], (_req, res) => res.redirect("/app"));
+
+  // If build is missing, serve a minimal placeholder to avoid 500s
+  if (!fs.existsSync(indexHtml)) {
+    app.get(["/app", "/app/*"], (_req, res) => {
+      res.status(200).send(`<!doctype html>
+        <html>
+          <head>
+            <meta charset=\"utf-8\" />
+            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+            <title>Sociocrates</title>
+            <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;padding:24px;max-width:720px;margin:auto;line-height:1.5}</style>
+          </head>
+          <body>
+            <h1>Backend is running</h1>
+            <p>The UI build is not available right now. API is healthy at <code>/api/ping</code>.</p>
+            <p>If you expected the full UI, the client build needs to be generated. For now, this placeholder is shown so the server doesn't hang.</p>
+          </body>
+        </html>`);
+    });
+    return;
+  }
 
   // Serve static assets from /app/
   app.use("/app", express.static(distPath));
 
   // Handle SPA routing for /app/* routes
-  app.use("/app/*", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+  app.get("/app/*", (_req, res) => {
+    res.sendFile(indexHtml);
   });
 
   // Fallback for root /app route
-  app.use("/app", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+  app.get("/app", (_req, res) => {
+    res.sendFile(indexHtml);
   });
 }
