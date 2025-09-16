@@ -895,9 +895,8 @@ async function registerRoutes(app2) {
 // client/server/vite.ts
 import { createServer as createViteServer } from "vite";
 import express from "express";
-import { fileURLToPath } from "url";
 import path from "path";
-var __dirname = path.dirname(fileURLToPath(import.meta.url));
+var projectRoot = process.cwd();
 function log(message) {
   const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
     hour12: false,
@@ -917,7 +916,8 @@ async function setupVite(app2, server) {
         // Disable HMR to fix connection issues
       },
       appType: "spa",
-      configFile: path.resolve(__dirname, "../vite.config.ts"),
+      // Always point to the client vite config from project root
+      configFile: path.resolve(projectRoot, "client/vite.config.ts"),
       clearScreen: false,
       optimizeDeps: {
         include: ["react", "react-dom"]
@@ -932,12 +932,12 @@ async function setupVite(app2, server) {
   }
 }
 function serveStatic(app2) {
-  const distPath = path.resolve(__dirname, "../dist");
+  const distPath = path.resolve(projectRoot, "client/dist");
   app2.use("/app", express.static(distPath));
-  app2.use("/app/*", (req, res) => {
+  app2.use("/app/*", (_req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
-  app2.use("/app", (req, res) => {
+  app2.use("/app", (_req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
