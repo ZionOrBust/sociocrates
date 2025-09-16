@@ -893,9 +893,9 @@ async function registerRoutes(app2) {
 }
 
 // client/server/vite.ts
-import { createServer as createViteServer } from "vite";
 import express from "express";
 import path from "path";
+import { createRequire } from "module";
 var projectRoot = process.cwd();
 function log(message) {
   const timestamp2 = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -906,9 +906,18 @@ function log(message) {
   });
   console.log(`${timestamp2} [express] ${message}`);
 }
+async function getViteCreateServer() {
+  const requireFromClient = createRequire(path.resolve(projectRoot, "client/package.json"));
+  const vitePkgPath = requireFromClient.resolve("vite/package.json");
+  const viteRoot = path.dirname(vitePkgPath);
+  const viteEntry = path.resolve(viteRoot, "dist/node/index.js");
+  const vite = await import(viteEntry);
+  return vite.createServer;
+}
 async function setupVite(app2, server) {
   try {
     log("Setting up Vite development server...");
+    const createViteServer = await getViteCreateServer();
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
