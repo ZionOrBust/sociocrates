@@ -1,53 +1,46 @@
 import express from "express";
+import express from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { neon } from "@neondatabase/serverless";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
-
-// Simple demo data store (in-memory)
-const users = [
-  { id: '1', email: 'admin@sociocracy.org', password: 'password', name: 'Admin User', role: 'admin' },
-  { id: '2', email: 'demo@sociocracy.org', password: 'password', name: 'Demo User', role: 'participant' }
-];
-
-// Demo circles data
-const circles = [
-  {
-    id: '1',
-    name: 'Main Circle',
-    description: 'Primary decision-making circle for our community',
-    createdBy: '1',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '2', 
-    name: 'Housing Circle',
-    description: 'Decisions related to housing and infrastructure',
-    createdBy: '1',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-// Demo proposals data
-const proposals = [
-  {
-    id: '1',
-    title: 'Community Garden Proposal',
-    description: 'Create a shared organic garden space for all residents',
-    circleId: '1',
-    createdBy: '1',
-    status: 'draft',
-    currentStep: 'proposal_presentation',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+const sql = neon(process.env.DATABASE_URL);
 
 const app = express();
+
+function toCamel(row) {
+  if (!row) return row;
+  const map = {
+    created_at: 'createdAt',
+    updated_at: 'updatedAt',
+    circle_id: 'circleId',
+    created_by: 'createdBy',
+    current_step: 'currentStep',
+    step_start_time: 'stepStartTime',
+    step_end_time: 'stepEndTime',
+    is_active: 'isActive',
+  };
+  const out = {};
+  for (const k of Object.keys(row)) out[map[k] || k] = row[k];
+  return out;
+}
+
+async function getUserByEmail(email) {
+  const rows = await sql`select id, email, name, role from users where email = ${email} limit 1`;
+  return rows[0] || null;
+}
+
+async function getUserWithPassword(email) {
+  const rows = await sql`select id, email, name, role, password from users where email = ${email} limit 1`;
+  return rows[0] || null;
+}
+
+async function createUser({ email, password, name, role = 'participant' }) {
+  const hash = await bcrypt.hash(password, 10);
+  const rows = await sql`insert into users (email, password, name, role) values (${email}, ${hash}, ${name}, ${role}) returning id, email, name, role`;
+  return rows[0];
+}
 
 // CORS
 app.use((req, res, next) => {
