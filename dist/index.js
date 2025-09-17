@@ -964,7 +964,13 @@ function serveStatic(app2) {
     });
     return;
   }
-  app2.use("/app", express.static(distPath));
+  app2.use("/app", express.static(distPath, { fallthrough: true, redirect: false }));
+  app2.get("/app/assets/*", (req, res, next) => {
+    const rel = req.path.replace(/^\/app\//, "");
+    const abs = path.join(distPath, rel);
+    if (fs.existsSync(abs)) return res.sendFile(abs);
+    return next();
+  });
   app2.get("/app/*", (_req, res) => {
     res.sendFile(indexHtml);
   });
