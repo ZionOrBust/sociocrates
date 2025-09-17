@@ -86,100 +86,128 @@ app.get('/ping', (req, res) => {
 });
 
 // Auth endpoints
+app.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    const existing = await getUserByEmail(email);
+    if (existing) return res.status(400).json({ message: 'User already exists' });
+    const user = await createUser({ email, password, name, role: 'participant' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ user, token });
+  } catch (err) {
+    res.status(500).json({ message: 'Registration failed' });
+  }
+});
+
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Auto-provision demo users
+    const demoUsers = {
+      'admin@sociocracy.org': { name: 'Admin User', role: 'admin' },
+      'demo@sociocracy.org': { name: 'Demo User', role: 'participant' },
+    };
+
+    let user = await getUserWithPassword(email);
+    if (!user && demoUsers[email]) {
+      user = await createUser({ email, password: 'password', name: demoUsers[email].name, role: demoUsers[email].role });
+      user.password = await bcrypt.hash('password', 10); // not used after
     }
-    
+
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    
-    res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      token
-    });
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, token });
   } catch (error) {
     res.status(500).json({ message: 'Login failed' });
   }
 });
 
 app.get('/auth/me', authenticateToken, (req, res) => {
-  res.json({
-    user: { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role }
-  });
+  res.json({ user: req.user });
 });
 
 // Circles endpoints
-app.get('/circles', authenticateToken, (req, res) => {
-  res.json(circles);
-});
-
-app.post('/circles', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+app.get('/circles', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles order by name`;
+    const data = rows.map(toCamel);
+    // Seed defaults if empty
+    if (data.length === 0 && req.user.role === 'admin') {
+      await sql`insert into circles (name, description, created_by, is_active) values ('Main Circle', 'Primary decision-making circle for our community', ${req.user.id}, true), ('Housing Circle', 'Decisions related to housing and infrastructure', ${req.user.id}, true)`;
+      const seeded = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles order by name`;
+      return res.json(seeded.map(toCamel));
+    }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch circles' });
   }
-
-  const { name, description } = req.body;
-  const newCircle = {
-    id: String(circles.length + 1),
-    name,
-    description,
-    createdBy: req.user.id,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  circles.push(newCircle);
-  res.json(newCircle);
 });
 
-app.get('/circles/:id', authenticateToken, (req, res) => {
-  const circle = circles.find(c => c.id === req.params.id);
-  if (!circle) {
-    return res.status(404).json({ message: 'Circle not found' });
+app.post('/circles', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+  try {
+    const { name, description } = req.body;
+    const rows = await sql`insert into circles (name, description, created_by, is_active) values (${name}, ${description}, ${req.user.id}, true) returning id, name, description, created_by, is_active, created_at, updated_at`;
+    res.json(toCamel(rows[0]));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create circle' });
   }
-  res.json(circle);
 });
 
-// Proposals endpoints  
-app.get('/circles/:circleId/proposals', authenticateToken, (req, res) => {
-  const circleProposals = proposals.filter(p => p.circleId === req.params.circleId);
-  res.json(circleProposals);
-});
-
-app.get('/proposals', authenticateToken, (req, res) => {
-  res.json(proposals);
-});
-
-app.post('/proposals', authenticateToken, (req, res) => {
-  const { title, description, circleId } = req.body;
-  const newProposal = {
-    id: String(proposals.length + 1),
-    title,
-    description,
-    circleId,
-    createdBy: req.user.id,
-    status: 'draft',
-    currentStep: 'proposal_presentation',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  proposals.push(newProposal);
-  res.json(newProposal);
-});
-
-app.get('/proposals/:id', authenticateToken, (req, res) => {
-  const proposal = proposals.find(p => p.id === req.params.id);
-  if (!proposal) {
-    return res.status(404).json({ message: 'Proposal not found' });
+app.get('/circles/:id', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles where id = ${req.params.id} limit 1`;
+    const circle = rows[0];
+    if (!circle) return res.status(404).json({ message: 'Circle not found' });
+    res.json(toCamel(circle));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch circle' });
   }
-  res.json(proposal);
+});
+
+// Proposals endpoints
+app.get('/circles/:circleId/proposals', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select * from proposals where circle_id = ${req.params.circleId} order by created_at desc`;
+    res.json(rows.map(toCamel));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch proposals' });
+  }
+});
+
+app.get('/proposals', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select * from proposals order by created_at desc`;
+    res.json(rows.map(toCamel));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch proposals' });
+  }
+});
+
+app.post('/proposals', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, circleId } = req.body;
+    const rows = await sql`insert into proposals (title, description, circle_id, created_by, status, current_step, is_active) values (${title}, ${description}, ${circleId}, ${req.user.id}, 'draft', 'proposal_presentation', true) returning *`;
+    res.json(toCamel(rows[0]));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create proposal' });
+  }
+});
+
+app.get('/proposals/:id', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select * from proposals where id = ${req.params.id} limit 1`;
+    const proposal = rows[0];
+    if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
+    res.json(toCamel(proposal));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch proposal' });
+  }
 });
 
 // Proposal process endpoints (simplified)
