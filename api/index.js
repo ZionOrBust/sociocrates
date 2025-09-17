@@ -210,92 +210,33 @@ app.get('/proposals/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Proposal process endpoints (simplified)
-app.get('/proposals/:proposalId/questions', authenticateToken, (req, res) => {
-  res.json([]);
-});
-
+// Proposal process endpoints (simplified stubs for now)
+app.get('/proposals/:proposalId/questions', authenticateToken, (_req, res) => res.json([]));
 app.post('/proposals/:proposalId/questions', authenticateToken, (req, res) => {
-  const { question } = req.body;
-  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, question, createdAt: new Date().toISOString() });
+  const { question } = req.body; res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, question, createdAt: new Date().toISOString() });
 });
-
-app.get('/proposals/:proposalId/reactions', authenticateToken, (req, res) => {
-  res.json([]);
-});
-
+app.get('/proposals/:proposalId/reactions', authenticateToken, (_req, res) => res.json([]));
 app.post('/proposals/:proposalId/reactions', authenticateToken, (req, res) => {
-  const { reaction } = req.body;
-  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, reaction, createdAt: new Date().toISOString() });
+  const { reaction } = req.body; res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, reaction, createdAt: new Date().toISOString() });
 });
-
-app.get('/proposals/:proposalId/objections', authenticateToken, (req, res) => {
-  res.json([]);
-});
-
+app.get('/proposals/:proposalId/objections', authenticateToken, (_req, res) => res.json([]));
 app.post('/proposals/:proposalId/objections', authenticateToken, (req, res) => {
-  const { objection, severity } = req.body;
-  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, objection, severity, isResolved: false, createdAt: new Date().toISOString() });
+  const { objection, severity } = req.body; res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, objection, severity, isResolved: false, createdAt: new Date().toISOString() });
 });
-
-app.get('/proposals/:proposalId/consent', authenticateToken, (req, res) => {
-  res.json([]);
-});
-
+app.get('/proposals/:proposalId/consent', authenticateToken, (_req, res) => res.json([]));
 app.post('/proposals/:proposalId/consent', authenticateToken, (req, res) => {
-  const { choice, reason } = req.body;
-  res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
+  const { choice, reason } = req.body; res.json({ id: '1', proposalId: req.params.proposalId, userId: req.user.id, choice, reason, createdAt: new Date().toISOString() });
 });
 
-// Admin endpoints
-app.get('/admin/users', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+// Admin users (read-only list from DB)
+app.get('/admin/users', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+  try {
+    const rows = await sql`select id, email, name, role from users order by email`;
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
-  res.json(users.map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role })));
-});
-
-app.get('/admin/users/:id', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
-
-  const user = users.find(u => u.id === req.params.id);
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
-});
-
-app.put('/admin/users/:id', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
-
-  const userIndex = users.findIndex(u => u.id === req.params.id);
-  if (userIndex === -1) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  const { name, email, role } = req.body;
-  users[userIndex] = { ...users[userIndex], name, email, role };
-
-  res.json({ id: users[userIndex].id, email: users[userIndex].email, name: users[userIndex].name, role: users[userIndex].role });
-});
-
-app.delete('/admin/users/:id', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
-
-  const userIndex = users.findIndex(u => u.id === req.params.id);
-  if (userIndex === -1) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  users.splice(userIndex, 1);
-  res.json({ message: 'User deleted' });
 });
 
 // Catch-all for unknown API routes
