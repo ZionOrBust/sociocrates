@@ -190,9 +190,9 @@ export default function Dashboard() {
                 <Card key={circle.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setLocation(`/circles/${circle.id}`)}>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      <a href={`/circles/${circle.id}`} onClick={(e) => { e.preventDefault(); setLocation(`/circles/${circle.id}`); }} className="text-blue-600 hover:underline">
+                      <Link href={`/circles/${circle.id}`} className="text-blue-600 hover:underline">
                         {circle.name}
-                      </a>
+                      </Link>
                     </CardTitle>
                     <CardDescription className="line-clamp-2">
                       {circle.description}
