@@ -80,8 +80,14 @@ const authenticateToken = async (req, res, next) => {
 };
 
 // Health check
-app.get('/ping', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/ping', async (_req, res) => {
+  try {
+    const rows = await sql`select 1 as ok`;
+    const dbOk = rows && rows[0] && rows[0].ok === 1;
+    res.json({ status: 'ok', db: dbOk ? 'ok' : 'error', timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.json({ status: 'ok', db: 'error', error: 'db_unreachable', timestamp: new Date().toISOString() });
+  }
 });
 
 // Auth endpoints
