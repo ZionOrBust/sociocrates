@@ -44,8 +44,8 @@ async function main() {
 
     for (const [outfile, info] of Object.entries(outputs)) {
       const isEntry = info.entryPoint && info.entryPoint.endsWith('src/main.tsx');
-      if (isEntry && outfile.endsWith('.js')) jsFile = path.basename(outfile);
-      if (isEntry && outfile.endsWith('.css')) cssFile = path.basename(outfile);
+      if (isEntry && outfile.endsWith('.js')) jsFile = path.relative(outDir, outfile);
+      if (isEntry && outfile.endsWith('.css')) cssFile = path.relative(outDir, outfile);
     }
 
     if (!jsFile) {
@@ -57,11 +57,11 @@ async function main() {
     let html = fs.readFileSync(htmlSrcPath, 'utf8');
 
     // Replace Vite script tag with built bundle served under /app
-    html = html.replace(/<script[^>]*src=\"[^\"]*src\/main\.tsx\"[^>]*><\/script>/, `<script type=\"module\" src=\"/app/${jsFile}\"></script>`);
+    html = html.replace(/<script[^>]*src=\"[^\"]*src\/main\.tsx\"[^>]*><\/script>/, `<script type=\"module\" src=\"/app/${jsFile.replace(/\\\\/g, '/')}\"></script>`);
 
     // Inject CSS link if present
     if (cssFile && !html.includes(cssFile)) {
-      const linkTag = `<link rel=\"stylesheet\" href=\"/app/${cssFile}\">`;
+      const linkTag = `<link rel=\"stylesheet\" href=\"/app/${cssFile.replace(/\\\\/g, '/')}\">`;
       html = html.replace(/<\/head>/, `${linkTag}\n</head>`);
     }
 
