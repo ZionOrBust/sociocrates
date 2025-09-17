@@ -40,6 +40,11 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Health check
+  app.get('/api/ping', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Auth routes
   app.post('/api/auth/register', async (req, res) => {
     try {
@@ -73,7 +78,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password } = req.body || {};
+
+      if (typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: 'Invalid payload' });
+      }
 
       // Auto-provision demo users if they don't exist yet
       const demoUsers: Record<string, { name: string; role: 'admin' | 'participant' } > = {
@@ -83,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let user = await storage.validateUser(email, password);
       if (!user && demoUsers[email] && password === 'password') {
-        const ensured = await storage.createUser({
+        await storage.createUser({
           email,
           password: 'password',
           name: demoUsers[email].name,
