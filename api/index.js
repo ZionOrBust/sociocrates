@@ -48,46 +48,31 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    return res.sendStatus(200);
   }
+  next();
 });
 
 app.use(express.json());
 // Normalize Vercel prefix so '/api/...'(rewrite) and '/api/index.js/...'(dest) map to our Express routes
 app.use((req, _res, next) => {
   const stripPrefix = (url, prefix) => (url.startsWith(prefix) ? url.slice(prefix.length) || '/' : null);
-  let newUrl = null;
-  // Handle dest: /api/index.js/$1
-  newUrl = stripPrefix(req.url, '/api/index.js');
-  if (!newUrl) {
-    // Handle generic /api/*
-    newUrl = stripPrefix(req.url, '/api');
-  }
-  if (newUrl) {
-    req.url = newUrl;
-  }
+  let newUrl = stripPrefix(req.url, '/api/index.js') || stripPrefix(req.url, '/api');
+  if (newUrl) req.url = newUrl;
   next();
 });
 
 // Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
+  if (!token) return res.status(401).json({ message: 'Access token required' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = users.find(u => u.id === decoded.userId);
-    
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-    
+    const rows = await sql`select id, email, name, role from users where id = ${decoded.userId} limit 1`;
+    const user = rows[0];
+    if (!user) return res.status(401).json({ message: 'User not found' });
     req.user = user;
     next();
   } catch (error) {
