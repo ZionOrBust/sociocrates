@@ -41,12 +41,12 @@ function AppContent() {
       <Navigation />
       <main className="container mx-auto px-4 py-8">
         <Switch>
-          <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/proposal/:id" component={Proposal} />
           <Route path="/create-proposal" component={CreateProposal} />
           <Route path="/circles/:id" component={Circle} />
           {user.role === 'admin' && <Route path="/admin" component={Admin} />}
+          <Route path="/" component={Dashboard} />
           <Route>
             <div className="text-center py-8">
               <h1 className="text-2xl font-bold text-gray-900">Page Not Found</h1>
