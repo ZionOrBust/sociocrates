@@ -6,7 +6,7 @@ import { LogOut, Settings, Users, FileText, Plus } from 'lucide-react';
 
 export default function Navigation() {
   const { user, logout } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const isActive = (path: string) => {
     return location === path || location.startsWith(path);
