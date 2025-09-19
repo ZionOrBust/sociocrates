@@ -53,6 +53,10 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+// Deployment boot time marker for diagnostics
+const BOOT_TIME = new Date().toISOString();
+// Expose boot time in response header to confirm new deploy
+app.use((req, res, next) => { res.setHeader('X-App-Revision', BOOT_TIME); next(); });
 // Normalize Vercel prefix so '/api/...'(rewrite) and '/api/index.js/...'(dest) map to our Express routes
 app.use((req, _res, next) => {
   const stripPrefix = (url, prefix) => (url.startsWith(prefix) ? url.slice(prefix.length) || '/' : null);
