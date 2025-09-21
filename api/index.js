@@ -59,9 +59,12 @@ const BOOT_TIME = new Date().toISOString();
 app.use((req, res, next) => { res.setHeader('X-App-Revision', BOOT_TIME); next(); });
 // Normalize Vercel prefix so '/api/...'(rewrite) and '/api/index.js/...'(dest) map to our Express routes
 app.use((req, _res, next) => {
-  const stripPrefix = (url, prefix) => (url.startsWith(prefix) ? url.slice(prefix.length) || '/' : null);
-  let newUrl = stripPrefix(req.url, '/api/index.js') || stripPrefix(req.url, '/api');
-  if (newUrl) req.url = newUrl;
+  // Only strip if a trailing path exists; keep '/' as is
+  if (req.url.startsWith('/api/index.js/')) {
+    req.url = req.url.slice('/api/index.js'.length);
+  } else if (req.url.startsWith('/api/')) {
+    req.url = req.url.slice('/api'.length);
+  }
   next();
 });
 
