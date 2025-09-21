@@ -219,6 +219,38 @@ app.get('/proposals/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Admin: set proposal step explicitly
+app.put('/proposals/:id/step', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+  try {
+    const { step } = req.body;
+    const valid = ['proposal_presentation','clarifying_questions','quick_reactions','objections_round','resolve_objections','consent_round','record_outcome'];
+    if (!valid.includes(step)) return res.status(400).json({ message: 'Invalid step' });
+    const rows = await sql`update proposals set current_step = ${step}, updated_at = now() where id = ${req.params.id} returning *`;
+    if (rows.length === 0) return res.status(404).json({ message: 'Proposal not found' });
+    res.json(toCamel(rows[0]));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update step' });
+  }
+});
+
+// Admin: advance to next step in sequence
+app.post('/proposals/:id/advance', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+  try {
+    const seq = ['proposal_presentation','clarifying_questions','quick_reactions','objections_round','resolve_objections','consent_round','record_outcome'];
+    const currRows = await sql`select id, current_step from proposals where id = ${req.params.id} limit 1`;
+    if (currRows.length === 0) return res.status(404).json({ message: 'Proposal not found' });
+    const current = currRows[0].current_step;
+    const idx = seq.indexOf(current);
+    const next = idx >= 0 && idx < seq.length - 1 ? seq[idx + 1] : seq[seq.length - 1];
+    const rows = await sql`update proposals set current_step = ${next}, updated_at = now() where id = ${req.params.id} returning *`;
+    res.json(toCamel(rows[0]));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to advance step' });
+  }
+});
+
 // Proposal process endpoints (simplified stubs for now)
 app.get('/proposals/:proposalId/questions', authenticateToken, (_req, res) => res.json([]));
 app.post('/proposals/:proposalId/questions', authenticateToken, (req, res) => {
