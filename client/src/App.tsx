@@ -17,6 +17,21 @@ import { Toaster } from './components/ui/toaster';
 
 function AppContent() {
   const { user, loading } = useAuth();
+  useEffect(() => {
+    (async () => {
+      if (user?.role === 'admin') {
+        try {
+          const resp = await fetch('/api/orgs/me', { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` } });
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.requiresSetup) {
+              window.location.hash = '/admin/settings';
+            }
+          }
+        } catch {}
+      }
+    })();
+  }, [user?.id]);
 
   if (loading) {
     return (
