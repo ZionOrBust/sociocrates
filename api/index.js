@@ -270,6 +270,10 @@ app.get('/proposals', authenticateToken, async (req, res) => {
 app.post('/proposals', authenticateToken, async (req, res) => {
   try {
     const { title, description, circleId } = req.body;
+    if (req.user.role !== 'admin') {
+      const member = await isMember(req.user.id, circleId);
+      if (!member) return res.status(403).json({ message: 'You must be a member of this circle to propose' });
+    }
     const rows = await sql`insert into proposals (title, description, circle_id, created_by, status, current_step, is_active) values (${title}, ${description}, ${circleId}, ${req.user.id}, 'draft', 'proposal_presentation', true) returning *`;
     res.json(toCamel(rows[0]));
   } catch (err) {
