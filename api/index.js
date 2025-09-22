@@ -211,6 +211,38 @@ app.get('/circles/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// List members of a circle
+app.get('/circles/:id/members', authenticateToken, async (req, res) => {
+  try {
+    const rows = await sql`select u.id, u.name, u.email, cm.role, u.created_at from circle_memberships cm join users u on u.id = cm.user_id where cm.circle_id = ${req.params.id} order by u.name`;
+    res.json(rows.map(toCamel));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch members' });
+  }
+});
+
+// Join a circle
+app.post('/circles/:id/join', authenticateToken, async (req, res) => {
+  try {
+    const exists = await sql`select 1 from circle_memberships where circle_id = ${req.params.id} and user_id = ${req.user.id} limit 1`;
+    if (exists.length > 0) return res.json({ joined: true });
+    await sql`insert into circle_memberships (circle_id, user_id, role) values (${req.params.id}, ${req.user.id}, ${req.user.role})`;
+    res.json({ joined: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to join circle' });
+  }
+});
+
+// Leave a circle
+app.post('/circles/:id/leave', authenticateToken, async (req, res) => {
+  try {
+    await sql`delete from circle_memberships where circle_id = ${req.params.id} and user_id = ${req.user.id}`;
+    res.json({ left: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to leave circle' });
+  }
+});
+
 // Proposals endpoints
 app.get('/circles/:circleId/proposals', authenticateToken, async (req, res) => {
   try {
