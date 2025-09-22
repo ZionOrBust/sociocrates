@@ -38,12 +38,14 @@ export default function CirclePage() {
     const fetchData = async () => {
       if (!id) return;
       try {
-        const [circleData, circleProposals] = await Promise.all([
+        const [circleData, circleProposals, circleMembers] = await Promise.all([
           apiCall(`/circles/${id}`),
           apiCall(`/circles/${id}/proposals`),
+          apiCall(`/circles/${id}/members`),
         ]);
         setCircle(circleData);
         setProposals(circleProposals);
+        setMembers(circleMembers);
       } catch (error) {
         console.error('Failed to load circle data:', error);
       } finally {
