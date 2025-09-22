@@ -147,6 +147,31 @@ app.get('/auth/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 
+// Update current user's profile (email and/or name)
+app.put('/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const { email, name } = req.body || {};
+    if (!email && !name) return res.status(400).json({ message: 'No changes provided' });
+    if (email && (typeof email !== 'string' || !email.includes('@') || email.length > 255)) {
+      return res.status(400).json({ message: 'Invalid email' });
+    }
+    if (name && (typeof name !== 'string' || !name.trim() || name.length > 255)) {
+      return res.status(400).json({ message: 'Invalid name' });
+    }
+    if (email) {
+      const exists = await sql`select id from users where email = ${email} and id <> ${req.user.id} limit 1`;
+      if (exists.length > 0) return res.status(409).json({ message: 'Email already in use' });
+    }
+    const newEmail = email ?? req.user.email;
+    const newName = name ?? req.user.name;
+    const rows = await sql`update users set email = ${newEmail}, name = ${newName}, updated_at = now() where id = ${req.user.id} returning id, email, name, role`;
+    const updated = rows[0];
+    res.json({ user: updated });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update profile' });
+  }
+});
+
 // Circles endpoints
 app.get('/circles', authenticateToken, async (req, res) => {
   try {
