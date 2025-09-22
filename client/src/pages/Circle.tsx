@@ -87,7 +87,7 @@ export default function CirclePage() {
           <p className="text-sm text-gray-500 mt-1">Members: {members.length}</p>
         </div>
         <div className="space-x-2">
-          <Button asChild>
+          <Button asChild disabled={user ? !members.some(m => m.id === user.id) && user.role !== 'admin' : true}>
             <Link href="/create-proposal">New Proposal</Link>
           </Button>
           {user && (
