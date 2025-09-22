@@ -84,10 +84,20 @@ export default function CirclePage() {
           {circle.description && (
             <p className="text-gray-600 mt-1">{circle.description}</p>
           )}
+          <p className="text-sm text-gray-500 mt-1">Members: {members.length}</p>
         </div>
-        <Button asChild>
-          <Link href="/create-proposal">New Proposal</Link>
-        </Button>
+        <div className="space-x-2">
+          <Button asChild>
+            <Link href="/create-proposal">New Proposal</Link>
+          </Button>
+          {user && (
+            members.some(m => m.id === user.id) ? (
+              <Button variant="outline" onClick={async () => { await apiCall(`/circles/${id}/leave`, { method: 'POST' }); setMembers(members.filter(m => m.id !== user.id)); }}>Leave Circle</Button>
+            ) : (
+              <Button variant="secondary" onClick={async () => { await apiCall(`/circles/${id}/join`, { method: 'POST' }); setMembers([...members, { id: user.id, name: user.name, email: user.email }]); }}>Join Circle</Button>
+            )
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
