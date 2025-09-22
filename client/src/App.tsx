@@ -52,7 +52,10 @@ function AppContent() {
           <Route path="/circles/:id" component={Circle} />
           <Route path="/account" component={Account} />
           {user.role === 'admin' ? (
-            <Route path="/admin" component={Admin} />
+            <>
+              <Route path="/admin/settings" component={AdminSettings} />
+              <Route path="/admin" component={Admin} />
+            </>
           ) : (
             <Route path="/admin">
               <div className="text-center py-8">
