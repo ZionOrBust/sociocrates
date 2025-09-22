@@ -23,6 +23,8 @@ function toCamel(row) {
     user_id: 'userId',
     proposal_id: 'proposalId',
     question_id: 'questionId',
+    org_id: 'orgId',
+    settings_json: 'settingsJson',
   };
   const out = {};
   for (const k of Object.keys(row)) out[map[k] || k] = row[k];
