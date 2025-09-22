@@ -173,6 +173,11 @@ app.put('/auth/me', authenticateToken, async (req, res) => {
 });
 
 // Circles endpoints
+const isMember = async (userId, circleId) => {
+  const r = await sql`select 1 from circle_memberships where user_id = ${userId} and circle_id = ${circleId} limit 1`;
+  return r.length > 0;
+};
+
 app.get('/circles', authenticateToken, async (req, res) => {
   try {
     const rows = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles order by name`;
