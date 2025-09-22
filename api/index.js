@@ -206,8 +206,14 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-app.get('/auth/me', authenticateToken, (req, res) => {
-  res.json({ user: req.user });
+app.get('/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const orgs = await sql`select o.id, o.name from organizations o join organization_memberships m on m.org_id = o.id where m.user_id = ${req.user.id} limit 1`;
+    const requiresSetup = req.user.role === 'admin' && orgs.length === 0;
+    res.json({ user: req.user, org: orgs[0] || null, requiresSetup });
+  } catch (e) {
+    res.json({ user: req.user, org: null, requiresSetup: req.user.role === 'admin' });
+  }
 });
 
 // Update current user's profile (email and/or name)
