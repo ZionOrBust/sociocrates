@@ -241,6 +241,55 @@ app.put('/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Orgs API
+app.get('/orgs/me', authenticateToken, async (req, res) => {
+  try {
+    const orgs = await sql`select o.id, o.name from organizations o join organization_memberships m on m.org_id = o.id where m.user_id = ${req.user.id} limit 1`;
+    if (orgs.length === 0) return res.json({ org: null, settings: DEFAULT_ORG_SETTINGS, requiresSetup: req.user.role === 'admin' });
+    const org = orgs[0];
+    const settingsRows = await sql`select settings_json from org_settings where org_id = ${org.id} limit 1`;
+    const settings = settingsRows.length ? settingsRows[0].settings_json : DEFAULT_ORG_SETTINGS;
+    res.json({ org, settings, requiresSetup: false });
+  } catch (e) { res.status(500).json({ message: 'Failed to load organization' }); }
+});
+
+app.post('/orgs/init', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+  try {
+    const { name, settings } = req.body || {};
+    if (!name || typeof name !== 'string') return res.status(400).json({ message: 'Organization name required' });
+    const existing = await sql`select o.id from organizations o join organization_memberships m on m.org_id = o.id where m.user_id = ${req.user.id} limit 1`;
+    if (existing.length) return res.status(409).json({ message: 'Organization already exists for this admin' });
+    const id = nanoid(12);
+    await sql`insert into organizations (id, name, created_by) values (${id}, ${name}, ${req.user.id})`;
+    await sql`insert into organization_memberships (org_id, user_id, role) values (${id}, ${req.user.id}, 'admin')`;
+    const effective = settings && typeof settings === 'object' ? settings : DEFAULT_ORG_SETTINGS;
+    await sql`insert into org_settings (org_id, settings_json) values (${id}, ${effective})`;
+    res.json({ org: { id, name }, settings: effective });
+  } catch (e) { res.status(500).json({ message: 'Failed to initialize organization' }); }
+});
+
+app.get('/orgs/:id/settings', authenticateToken, async (req, res) => {
+  try {
+    const member = await sql`select 1 from organization_memberships where org_id = ${req.params.id} and user_id = ${req.user.id} limit 1`;
+    if (!member.length) return res.status(403).json({ message: 'Not a member of this organization' });
+    const settingsRows = await sql`select settings_json from org_settings where org_id = ${req.params.id} limit 1`;
+    const settings = settingsRows.length ? settingsRows[0].settings_json : DEFAULT_ORG_SETTINGS;
+    res.json({ settings });
+  } catch (e) { res.status(500).json({ message: 'Failed to load settings' }); }
+});
+
+app.put('/orgs/:id/settings', authenticateToken, async (req, res) => {
+  try {
+    const admin = await sql`select 1 from organization_memberships where org_id = ${req.params.id} and user_id = ${req.user.id} and role = 'admin' limit 1`;
+    if (!admin.length) return res.status(403).json({ message: 'Admin access required' });
+    const next = req.body?.settings;
+    if (!next || typeof next !== 'object') return res.status(400).json({ message: 'Invalid settings' });
+    await sql`insert into org_settings (org_id, settings_json) values (${req.params.id}, ${next}) on conflict (org_id) do update set settings_json = excluded.settings_json`;
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: 'Failed to save settings' }); }
+});
+
 // Circles endpoints
 const isMember = async (userId, circleId) => {
   const r = await sql`select 1 from circle_memberships where user_id = ${userId} and circle_id = ${circleId} limit 1`;
