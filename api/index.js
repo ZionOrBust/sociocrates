@@ -63,6 +63,67 @@ app.use(express.json());
 const BOOT_TIME = new Date().toISOString();
 // Expose boot time in response header to confirm new deploy
 app.use((req, res, next) => { res.setHeader('X-App-Revision', BOOT_TIME); next(); });
+
+// Organization tables and default settings
+async function ensureOrgTables() {
+  try {
+    await sql`create table if not exists organizations (
+      id text primary key,
+      name text not null,
+      created_by uuid not null references users(id),
+      created_at timestamp default now() not null
+    )`;
+    await sql`create table if not exists organization_memberships (
+      org_id text not null references organizations(id) on delete cascade,
+      user_id uuid not null references users(id) on delete cascade,
+      role text not null,
+      primary key (org_id, user_id)
+    )`;
+    await sql`create table if not exists org_settings (
+      org_id text primary key references organizations(id) on delete cascade,
+      settings_json jsonb not null
+    )`;
+    await sql`create table if not exists organization_circles (
+      org_id text not null references organizations(id) on delete cascade,
+      circle_id uuid not null references circles(id) on delete cascade,
+      unique(circle_id)
+    )`;
+  } catch (e) { /* noop */ }
+}
+ensureOrgTables();
+
+const DEFAULT_ORG_SETTINGS = {
+  timing: {
+    clarifyingQuestions: '3d',
+    quickReactions: '2d',
+    objectionRound: '5d',
+    resolveObjections: '7d',
+    consentRound: '3d',
+  },
+  autoAdvance: {
+    enabled: true,
+    requireAllQuestionsAnswered: true,
+    requireNoOpenObjections: true,
+  },
+  quorum: { privatePercent: 60, assemblyPercent: 70 },
+  eligibility: { lockAtStageOpen: true },
+  notify: {
+    channels: { email: true, sms: false },
+    reminders: { enabled: true, offsets: ['-24h','-2h'] },
+    admin: { onAutoAdvanceFailure: true, email: '' },
+  },
+  privacy: {
+    objections: { voterNames: 'Public' },
+    observers: { anonymized: true },
+  },
+  consent: { allowReservationNote: true },
+  objection: { requireHarmStatement: true, requireStrengthScale: true, allowShares: true },
+  resolution: { editors: 'Proposer + Facilitator', requirePatchNote: true, objectorAckRequired: true },
+  overrides: { allowPerProposalTimers: false, allowManualAdvanceByFacilitator: true },
+  handoff: { finalAuthority: 'Board', email: '', cellphone: '', autoSendFinalReport: true },
+  report: { includeFinalText: true, includeParticipationStats: true },
+  assembly: { nominations: { enabled: true, threshold: 'Majority' } },
+};
 // Normalize Vercel prefix so '/api/...'(rewrite) and '/api/index.js/...'(dest) map to our Express routes
 app.use((req, _res, next) => {
   // Only strip if a trailing path exists; keep '/' as is
