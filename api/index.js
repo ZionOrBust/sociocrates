@@ -298,15 +298,23 @@ const isMember = async (userId, circleId) => {
 
 app.get('/circles', authenticateToken, async (req, res) => {
   try {
-    const rows = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles order by name`;
-    const data = rows.map(toCamel);
-    // Seed defaults if empty
-    if (data.length === 0 && req.user.role === 'admin') {
-      await sql`insert into circles (name, description, created_by, is_active) values ('Main Circle', 'Primary decision-making circle for our community', ${req.user.id}, true), ('Housing Circle', 'Decisions related to housing and infrastructure', ${req.user.id}, true)`;
-      const seeded = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles order by name`;
-      return res.json(seeded.map(toCamel));
-    }
-    res.json(data);
+    const rows = await sql`
+      (
+        select c.* from circles c
+        join circle_memberships cm on cm.circle_id = c.id and cm.user_id = ${req.user.id}
+      )
+      union
+      (
+        select c.* from circles c where c.created_by = ${req.user.id}
+      )
+      union
+      (
+        select c.* from circles c
+        join organization_circles oc on oc.circle_id = c.id
+        join organization_memberships om on om.org_id = oc.org_id and om.user_id = ${req.user.id}
+      )
+      order by created_at desc`;
+    res.json(rows.map(toCamel));
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch circles' });
   }
