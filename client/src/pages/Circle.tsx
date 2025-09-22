@@ -31,6 +31,7 @@ export default function CirclePage() {
 
   const [circle, setCircle] = useState<Circle | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
