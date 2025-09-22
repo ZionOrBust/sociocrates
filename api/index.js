@@ -325,7 +325,12 @@ app.post('/circles', authenticateToken, async (req, res) => {
   try {
     const { name, description } = req.body;
     const rows = await sql`insert into circles (name, description, created_by, is_active) values (${name}, ${description}, ${req.user.id}, true) returning id, name, description, created_by, is_active, created_at, updated_at`;
-    res.json(toCamel(rows[0]));
+    const circle = rows[0];
+    const orgs = await sql`select o.id from organizations o join organization_memberships m on m.org_id = o.id and m.user_id = ${req.user.id} limit 1`;
+    if (orgs.length) {
+      await sql`insert into organization_circles (org_id, circle_id) values (${orgs[0].id}, ${circle.id}) on conflict do nothing`;
+    }
+    res.json(toCamel(circle));
   } catch (err) {
     res.status(500).json({ message: 'Failed to create circle' });
   }
