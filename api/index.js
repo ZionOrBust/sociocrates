@@ -5,7 +5,15 @@ import { neon } from "@neondatabase/serverless";
 import { nanoid } from 'nanoid';
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
-const sql = neon(process.env.DATABASE_URL);
+const connectionString = process.env.DATABASE_URL;
+// Initialize Neon lazily and safely. If DATABASE_URL is missing in the environment,
+// provide a fallback tag function that throws when used, so route handlers can catch
+// and return JSON errors instead of crashing the serverless function at import time.
+const sql = connectionString
+  ? neon(connectionString)
+  : async function sqlFallback() {
+      throw new Error('DATABASE_URL not configured');
+    };
 
 const app = express();
 
