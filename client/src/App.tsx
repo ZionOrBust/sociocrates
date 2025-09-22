@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Proposal from './pages/Proposal';
 import Admin from './pages/Admin';
+import AdminSettings from './pages/AdminSettings';
 import CreateProposal from './pages/CreateProposal';
 import Account from './pages/Account';
 import Circle from './pages/Circle';
