@@ -14,6 +14,7 @@ const sql = connectionString
   : async function sqlFallback() {
       throw new Error('DATABASE_URL not configured');
     };
+const DEMO_MODE = !connectionString;
 
 const app = express();
 
@@ -151,6 +152,10 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (DEMO_MODE && decoded && decoded.user) {
+      req.user = decoded.user;
+      return next();
+    }
     const rows = await sql`select id, email, name, role from users where id = ${decoded.userId} limit 1`;
     const user = rows[0];
     if (!user) return res.status(401).json({ message: 'User not found' });
@@ -176,6 +181,11 @@ app.get('/ping', async (_req, res) => {
 app.post('/auth/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
+    if (DEMO_MODE) {
+      const user = { id: nanoid(12), email, name: name || email.split('@')[0], role: 'participant' };
+      const token = jwt.sign({ userId: user.id, user }, JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ user, token });
+    }
     const existing = await getUserByEmail(email);
     if (existing) return res.status(400).json({ message: 'User already exists' });
     const user = await createUser({ email, password, name, role: 'participant' });
@@ -190,7 +200,22 @@ app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Auto-provision demo users
+    // Demo-mode: allow built-in accounts without DB
+    if (DEMO_MODE) {
+      const demoUsers = {
+        'admin@sociocracy.org': { id: 'admin-demo', email: 'admin@sociocracy.org', name: 'Admin User', role: 'admin', password: 'password' },
+        'demo@sociocracy.org': { id: 'demo-user', email: 'demo@sociocracy.org', name: 'Demo User', role: 'participant', password: 'password' },
+      };
+      const demo = demoUsers[email];
+      if (demo && password === demo.password) {
+        const { password: _omit, ...u } = demo;
+        const token = jwt.sign({ userId: u.id, user: u }, JWT_SECRET, { expiresIn: '7d' });
+        return res.json({ user: u, token });
+      }
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Auto-provision demo users in DB-backed mode
     const demoUsers = {
       'admin@sociocracy.org': { name: 'Admin User', role: 'admin' },
       'demo@sociocracy.org': { name: 'Demo User', role: 'participant' },
@@ -199,7 +224,7 @@ app.post('/auth/login', async (req, res) => {
     let user = await getUserWithPassword(email);
     if (!user && demoUsers[email]) {
       user = await createUser({ email, password: 'password', name: demoUsers[email].name, role: demoUsers[email].role });
-      user.password = await bcrypt.hash('password', 10); // not used after
+      user.password = await bcrypt.hash('password', 10);
     }
 
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
@@ -216,6 +241,10 @@ app.post('/auth/login', async (req, res) => {
 
 app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      const requiresSetup = req.user.role === 'admin';
+      return res.json({ user: req.user, org: null, requiresSetup });
+    }
     const orgs = await sql`select o.id, o.name from organizations o join organization_memberships m on m.org_id = o.id where m.user_id = ${req.user.id} limit 1`;
     const requiresSetup = req.user.role === 'admin' && orgs.length === 0;
     res.json({ user: req.user, org: orgs[0] || null, requiresSetup });
