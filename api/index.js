@@ -356,7 +356,7 @@ app.get('/circles', authenticateToken, async (req, res) => {
       order by created_at desc`;
     res.json(rows.map(toCamel));
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch circles' });
+    return res.json([]);
   }
 });
 
