@@ -335,6 +335,9 @@ const isMember = async (userId, circleId) => {
 
 app.get('/circles', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      return res.json([]);
+    }
     const rows = await sql`
       (
         select c.* from circles c
@@ -375,6 +378,9 @@ app.post('/circles', authenticateToken, async (req, res) => {
 
 app.get('/circles/:id', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      return res.status(404).json({ message: 'Circle not found' });
+    }
     const rows = await sql`select id, name, description, created_by, is_active, created_at, updated_at from circles where id = ${req.params.id} limit 1`;
     const circle = rows[0];
     if (!circle) return res.status(404).json({ message: 'Circle not found' });
@@ -419,6 +425,9 @@ app.post('/circles/:id/leave', authenticateToken, async (req, res) => {
 // Proposals endpoints
 app.get('/circles/:circleId/proposals', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      return res.json([]);
+    }
     const rows = await sql`select * from proposals where circle_id = ${req.params.circleId} order by created_at desc`;
     res.json(rows.map(toCamel));
   } catch (err) {
@@ -428,6 +437,9 @@ app.get('/circles/:circleId/proposals', authenticateToken, async (req, res) => {
 
 app.get('/proposals', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      return res.json([]);
+    }
     const rows = await sql`select * from proposals order by created_at desc`;
     res.json(rows.map(toCamel));
   } catch (err) {
@@ -451,6 +463,9 @@ app.post('/proposals', authenticateToken, async (req, res) => {
 
 app.get('/proposals/:id', authenticateToken, async (req, res) => {
   try {
+    if (DEMO_MODE) {
+      return res.status(404).json({ message: 'Proposal not found' });
+    }
     const rows = await sql`select * from proposals where id = ${req.params.id} limit 1`;
     const proposal = rows[0];
     if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
