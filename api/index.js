@@ -431,7 +431,7 @@ app.get('/circles/:circleId/proposals', authenticateToken, async (req, res) => {
     const rows = await sql`select * from proposals where circle_id = ${req.params.circleId} order by created_at desc`;
     res.json(rows.map(toCamel));
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch proposals' });
+    return res.json([]);
   }
 });
 
@@ -443,7 +443,7 @@ app.get('/proposals', authenticateToken, async (req, res) => {
     const rows = await sql`select * from proposals order by created_at desc`;
     res.json(rows.map(toCamel));
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch proposals' });
+    return res.json([]);
   }
 });
 
