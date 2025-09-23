@@ -152,7 +152,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (DEMO_MODE && decoded && decoded.user) {
+    if (decoded && decoded.user) {
       req.user = decoded.user;
       return next();
     }
