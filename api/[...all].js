@@ -39,18 +39,49 @@ function normalize(parts) {
   if (p.length === 0) return "/";
   if (p[0] === "auth" && p[1] === "login") return "/auth/login";
   if (p[0] === "auth" && p[1] === "me") return "/auth/me";
+  if (p[0] === "orgs" && p[1] === "me") return "/orgs/me";
   if (p[0] === "circles" && p.length === 1) return "/circles";
-  if (p[0] === "circles" && p[2] === "proposals") return "/circles/_id/proposals";
-  if (p[0] === "proposals" && p.length === 1) return "/proposals";
-  if (p[0] === "proposals" && p[1]) return "/proposals/_id";
-  if (p[0] === "admin" && p[1] === "users" && p[2]) return "/admin/users/_id";
-  if (p[0] === "ping") return "/ping";
   return "/" + p.join("/");
+}
+
+function getUser(req) {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.user || (decoded.userId ? { id: decoded.userId, role: 'participant' } : null);
+  } catch {
+    return null;
+  }
+}
+
+function orgsMe(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+  const u = getUser(req);
+  if (!u) return res.status(401).json({ message: 'Access token required' });
+  const requiresSetup = u.role === 'admin';
+  return res.status(200).json({ user: u, org: null, requiresSetup });
+}
+
+function circlesList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+  const u = getUser(req);
+  if (!u) return res.status(401).json({ message: 'Access token required' });
+  return res.status(200).json([]);
 }
 
 const routes = {
   "/auth/login": { POST: authLogin },
   "/auth/me": { GET: authMe },
+  "/orgs/me": { GET: orgsMe },
+  "/circles": { GET: circlesList },
 };
 
 export default async function handler(req, res) {
