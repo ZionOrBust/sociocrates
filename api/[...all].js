@@ -40,6 +40,7 @@ function normalize(parts) {
   if (p[0] === "auth" && p[1] === "me") return "/auth/me";
   if (p[0] === "orgs" && p[1] === "me") return "/orgs/me";
   if (p[0] === "circles" && p.length === 1) return "/circles";
+  if (p[0] === "admin" && p[1] === "users" && p.length === 2) return "/admin/users";
   return "/" + p.join("/");
 }
 
@@ -102,11 +103,21 @@ async function circlesCreate(req, res) {
   }
 }
 
+function adminUsersList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+  // Return empty list in demo mode; extend later when DB is ready
+  return res.status(200).json([]);
+}
+
 const routes = {
   "/auth/login": { POST: loginHandler },
   "/auth/me": { GET: authMe },
   "/orgs/me": { GET: orgsMe },
   "/circles": { GET: circlesList, POST: circlesCreate },
+  "/admin/users": { GET: adminUsersList },
 };
 
 export default async function handler(req, res) {
