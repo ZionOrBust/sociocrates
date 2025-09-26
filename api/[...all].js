@@ -8,6 +8,8 @@ function setCors(res) {
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+// Ephemeral in-memory store for demo mode (persists only within warm instance)
+const demoCircles = [];
 
 function authMe(req, res) {
   if (req.method !== 'GET') {
@@ -72,8 +74,9 @@ function circlesList(req, res) {
     res.setHeader('Allow', 'GET, OPTIONS');
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
-  // Demo: return empty list regardless of auth to avoid dashboard hard-fail
-  return res.status(200).json([]);
+  const u = getUser(req);
+  const list = u ? demoCircles.filter(c => c.createdBy === u.id) : demoCircles;
+  return res.status(200).json(list);
 }
 
 async function circlesCreate(req, res) {
@@ -97,7 +100,9 @@ async function circlesCreate(req, res) {
     if (!name) return res.status(400).json({ message: 'Name is required' });
     const u = getUser(req) || { id: 'demo-user', role: 'admin' };
     const now = new Date().toISOString();
-    return res.status(201).json({ id: 'demo-' + Math.random().toString(36).slice(2, 10), name, description, createdBy: u.id, isActive: true, createdAt: now, updatedAt: now });
+    const created = { id: 'demo-' + Math.random().toString(36).slice(2, 10), name, description, createdBy: u.id, isActive: true, createdAt: now, updatedAt: now };
+    demoCircles.unshift(created);
+    return res.status(201).json(created);
   } catch (e) {
     return res.status(400).json({ message: 'Invalid JSON' });
   }
