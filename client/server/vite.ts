@@ -58,15 +58,39 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // Serve the built client from client/dist when not in dev
-  const distPath = path.resolve(projectRoot, "client/dist");
-  const indexHtml = path.join(distPath, "index.html");
+  const candidateDirs: string[] = [];
+  const configuredDist = process.env.CLIENT_DIST;
+
+  if (configuredDist) {
+    const resolved = path.isAbsolute(configuredDist)
+      ? configuredDist
+      : path.resolve(projectRoot, configuredDist);
+    candidateDirs.push(resolved);
+  }
+
+  candidateDirs.push(
+    path.resolve(projectRoot, "client/dist"),
+    path.resolve(projectRoot, "dist/client"),
+    path.resolve(projectRoot, "dist/public")
+  );
+
+  let distPath: string | null = null;
+  let indexHtml: string | null = null;
+
+  for (const candidate of candidateDirs) {
+    const htmlPath = path.join(candidate, "index.html");
+    if (fs.existsSync(htmlPath)) {
+      distPath = candidate;
+      indexHtml = htmlPath;
+      break;
+    }
+  }
 
   // Always provide a root redirect to /app
   app.get(["/", ""], (_req, res) => res.redirect("/app"));
 
   // If build is missing, serve a minimal placeholder to avoid 500s
-  if (!fs.existsSync(indexHtml)) {
+  if (!distPath || !indexHtml) {
     app.get(["/app", "/app/*"], (_req, res) => {
       res.status(200).send(`<!doctype html>
         <html>
