@@ -110,24 +110,26 @@ export function serveStatic(app: Express) {
     return;
   }
 
+  log(`Serving static assets from ${distPath}`);
+
   // Serve static assets from /app/
-  app.use("/app", express.static(distPath, { fallthrough: true, redirect: false }));
+  app.use("/app", express.static(distPath!, { fallthrough: true, redirect: false }));
 
   // Explicit asset handler to avoid SPA wildcard catching files
   app.get("/app/assets/*", (req, res, next) => {
     const rel = req.path.replace(/^\/app\//, "");
-    const abs = path.join(distPath, rel);
+    const abs = path.join(distPath!, rel);
     if (fs.existsSync(abs)) return res.sendFile(abs);
     return next();
   });
 
   // Handle SPA routing for /app/* routes
   app.get("/app/*", (_req, res) => {
-    res.sendFile(indexHtml);
+    res.sendFile(indexHtml!);
   });
 
   // Fallback for root /app route
   app.get("/app", (_req, res) => {
-    res.sendFile(indexHtml);
+    res.sendFile(indexHtml!);
   });
 }
