@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
+
 const app = express();
 
 // Add CORS support
