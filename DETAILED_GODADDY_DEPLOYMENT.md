@@ -96,9 +96,9 @@
    ls -la
    ```
    
-   *You should see: package.json, dist/, server/, shared/ folders*
+   *You should see: package.json, dist/ (with index.js and the client build inside dist/client), node_modules/*
 
-4. **Check Node.js version**
+   4. **Check Node.js version**
    ```bash
    node --version
    npm --version
