@@ -6,6 +6,8 @@ const projectRoot = process.cwd();
 const clientRoot = path.join(projectRoot, 'client');
 const outDir = path.join(clientRoot, 'dist');
 
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+
 async function main() {
   try {
     // Ensure output directory exists
@@ -67,7 +69,16 @@ async function main() {
 
     fs.writeFileSync(path.join(outDir, 'index.html'), html, 'utf8');
 
+    const serverDistRoot = path.join(projectRoot, 'dist');
+    const packagedClientDir = path.join(serverDistRoot, 'client');
+    fs.mkdirSync(serverDistRoot, { recursive: true });
+    if (fs.existsSync(packagedClientDir)) {
+      fs.rmSync(packagedClientDir, { recursive: true, force: true });
+    }
+    fs.cpSync(outDir, packagedClientDir, { recursive: true });
+
     console.log('✅ Client built with esbuild');
+    console.log(`📦 Packaged client assets to ${packagedClientDir}`);
   } catch (err) {
     console.error('❌ Esbuild client build failed:', err?.message || err);
     process.exit(1);
