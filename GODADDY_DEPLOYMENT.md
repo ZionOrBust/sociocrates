@@ -15,12 +15,11 @@ The production files are ready to upload to your GoDaddy hosting account.
 1. **Log into GoDaddy cPanel**
 2. **Open File Manager**
 3. **Navigate to your domain's public_html folder**
-4. **Upload these files/folders:**
+4. **Upload these files/folders after running `npm run build`:**
    ```
-   dist/           (built React app)
-   server/         (Node.js backend)
-   shared/         (database schema)
+   dist/           (contains the Node server bundle + client assets under dist/client)
    package.json
+   package-lock.json   (recommended if you have it)
    node_modules/   (or run npm install on server)
    ```
 
@@ -60,6 +59,7 @@ In GoDaddy hosting settings:
 - **App Root**: `/public_html`
 - **Startup File**: `dist/index.js`
 - **Port**: Use GoDaddy's assigned port (usually 3000)
+- **Static Assets**: Served automatically from `dist/client`
 
 ## Step 6: Database Connection
 
@@ -80,13 +80,13 @@ Your Neon database is already configured and ready! The app will automatically:
 ## File Structure for Upload:
 ```
 public_html/
-├── dist/
-│   ├── index.html
-│   ├── assets/
-│   └── index.js
-├── server/
-├── shared/
+��── dist/
+│   ├── index.js
+│   └── client/
+│       ├── index.html
+│       └── assets/
 ├── package.json
+├── package-lock.json (optional)
 └── node_modules/
 ```
 
